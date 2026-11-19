@@ -1,0 +1,73 @@
+# adf-adls-medallion-ci
+
+[![Licença: MIT](https://img.shields.io/badge/licença-MIT-22c55e)](LICENSE)
+
+Carga incremental de uma fonte pública que **reescreve o próprio passado**, com Azure Data
+Factory, ADLS Gen2 em camadas (bronze, prata e ouro), Terraform e CI/CD no Azure Pipelines.
+
+A fonte é o Informe Diário de fundos de investimento da CVM. Todo dia ela regrava o mês corrente
+e o anterior, e toda semana os dez meses antes deles. Carregar só o mês novo deixa o lake errado
+sem nenhum erro aparecer. A pergunta do projeto é **como recarregar o que a fonte republica sem
+duplicar e sem perder linha, e provar isso**.
+
+---
+
+## Em um minuto
+
+| | |
+|---|---|
+| **O que é** | CVM (ZIP por mês) → ADF (Copy) → ADLS Gen2: bronze (ZIP original, versionado) → prata (Parquet tipado, uma partição por mês) → ouro (indicadores por fundo e mês, Azure Function com DuckDB) |
+| **Com que dado** | Informe Diário da CVM: ~540 mil linhas por mês, 12 meses na janela. Baixado na execução, nunca versionado ([D1](docs/decisoes.md#d1-dado-público-real-baixado-na-execução-e-nunca-versionado)) |
+| **Garantia** | Carga idempotente por substituição do mês inteiro: reexecutar não muda nada, e uma linha que a fonte removeu some do destino ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-em-parquet)) |
+| **Como se prova** | Contagem e SHA-256 canônico por mês, bronze × prata, e uma republicação simulada (T0 → T1) que só pode mudar o mês republicado ([D7](docs/decisoes.md#d7-a-prova-contagem-e-sha-256-canônico-por-mês-e-republicação-simulada)) |
+| **Infra e entrega** | Terraform (dev e prod), identidade gerenciada, Key Vault, GitHub Actions no CI e Azure Pipelines com aprovação de dev para prod |
+| **O que não é** | Não foi aplicado na Azure: é o desenho de referência, com tudo que roda fora da nuvem validado na máquina e o roteiro de implantação em [`docs/runbook.md`](docs/runbook.md) (ver [Limites declarados](#limites-declarados)) |
+
+**Para avaliar em 10 minutos:** [arquitetura](docs/arquitetura.md) →
+[registro de decisões](docs/decisoes.md) → [como se testa](docs/testes.md).
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+    CVM["CVM<br/>ZIP por mês"] -- "Copy" --> B[("bronze<br/>ZIP versionado")]
+    B -- "Copy ZIP → Parquet" --> P[("prata<br/>partição por mês")]
+    P -- "Azure Function<br/>DuckDB" --> O[("ouro<br/>fundo × mês")]
+    P -. "contagem + SHA-256" .-> C[("controle<br/>reconciliação")]
+    ADF["Azure Data Factory<br/>diário: M e M-1<br/>semanal: M-2 a M-11"] -. orquestra .-> B
+```
+
+Detalhes, layout do lake, segurança, ambientes e custo estimado: [`docs/arquitetura.md`](docs/arquitetura.md).
+
+## Situação
+
+| Parte | Situação |
+|---|---|
+| Desenho e decisões | pronto |
+| Carga local e prova com o dado da CVM | em construção |
+| Terraform | em construção |
+| ADF (JSON) | em construção |
+| CI/CD e runbook | em construção |
+
+## Limites declarados
+
+- **Não aplicado na Azure.** O ADF não tem emulador e o Azurite não implementa o ADLS Gen2, então
+  a execução na nuvem é o passo do [runbook](docs/runbook.md). O que só a Azure confirma está em
+  [`docs/testes.md`](docs/testes.md#só-na-azure).
+- A tese é provada pela execução local da mesma lógica, nas mesmas pastas e com a mesma janela.
+  A equivalência com o ADF executando só se confirma implantando.
+- A republicação é simulada: a CVM não reapresenta um mês a pedido.
+- Entre apagar e regravar a partição, um leitor concorrente veria o mês vazio. O único leitor é
+  a etapa seguinte do próprio pipeline ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-em-parquet)).
+- Só os últimos 12 meses do Informe Diário.
+
+## Fonte do dado
+
+Informe Diário de fundos de investimento, Comissão de Valores Mobiliários (CVM),
+[dados.cvm.gov.br](https://dados.cvm.gov.br/dataset/fi-doc-inf_diario), sob a
+[Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/1-0/). O repositório não
+contém nem redistribui o dado.
+
+## Licença
+
+Código sob a licença [MIT](LICENSE).
