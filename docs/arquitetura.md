@@ -33,10 +33,10 @@ Os meses anteriores a M-11 não mudam mais.
 
 **Consequência:** carregar só o mês novo deixa o lake errado em silêncio, porque uma
 reapresentação de agosto muda agosto, não o mês corrente. O pipeline precisa recarregar a
-**janela mutável** e congelar o resto. Essa é a tese do projeto:
+**janela de reprocessamento** (*lookback window*) e congelar o resto. Essa é a tese do projeto:
 
-> A carga incremental reprocessa os meses que a CVM republica, sem duplicar e sem perder, e
-> prova isso por contagem e hash SHA-256 por mês de competência.
+> A recarga da janela mutável substitui os meses que a CVM republica, sem duplicar e sem perder
+> linha. A reconciliação confere isso por contagem e SHA-256 por mês de competência.
 
 ## 2. Visão geral
 
@@ -44,21 +44,22 @@ reapresentação de agosto muda agosto, não o mês corrente. O pipeline precisa
 flowchart LR
     CVM["CVM<br/>dados.cvm.gov.br<br/>ZIP por mês"]
     subgraph RG["Resource group por ambiente (dev, prod)"]
-        ADF["Azure Data Factory<br/>pl_inf_diario<br/>(identidade gerenciada)"]
-        subgraph ADLS["ADLS Gen2 (namespace hierárquico)"]
+        ADF["Azure Data Factory<br/>pl_inf_diario → pl_inf_diario_mes<br/>(identidade gerenciada)"]
+        subgraph ADLS["ADLS Gen2 do lake (namespace hierárquico)"]
             B[("bronze<br/>ZIP original,<br/>uma versão por carga")]
+            S[("staging<br/>Parquet da carga,<br/>antes de validar")]
             P[("prata<br/>Parquet tipado,<br/>uma partição por mês")]
             O[("ouro<br/>indicadores por<br/>fundo e mês")]
-            C[("controle<br/>manifesto e<br/>reconciliação")]
+            C[("controle<br/>manifesto e relatório<br/>por mês")]
         end
-        FN["Azure Function (Python)<br/>DuckDB: ouro + reconciliação"]
+        FN["Azure Function (Python, Flex Consumption)<br/>DuckDB: validação, ouro, reconciliação"]
         KV["Key Vault<br/>chave da Function"]
         AL["Alerta de falha<br/>+ orçamento (e-mail)"]
     end
     CVM -- "Copy (HTTP, binário)" --> B
-    B -- "Copy (ZIP → CSV → Parquet)" --> P
+    B -- "Copy (ZIP → CSV → Parquet)" --> S
+    S -- "Copy (depois de validar)" --> P
     ADF -. orquestra .-> B
-    ADF -. orquestra .-> P
     ADF -- "Azure Function activity" --> FN
     FN --> O
     FN --> C
@@ -67,84 +68,112 @@ flowchart LR
 ```
 
 Papéis (D2):
-- **ADF:** orquestra e move. Busca o arquivo, descompacta, tipa e grava, sem cluster de Spark.
-- **Function:** faz o que exige lógica (agregação e prova). O volume é de ~540 mil linhas por
-  mês, e o DuckDB resolve em memória.
+- **ADF:** orquestra e move. Busca o arquivo, descompacta, converte e grava, sem cluster de
+  Spark.
+- **Function:** faz o que exige lógica: a validação, o ouro e a prova. O volume é de ~540 mil
+  linhas por mês, e o DuckDB resolve em memória.
 - **ADLS Gen2:** é o lake.
 
 ## 3. O pipeline do ADF
 
-Um pipeline parametrizado (`pl_inf_diario`) e dois gatilhos, que seguem o contrato da fonte (D3):
+Dois pipelines: o pai (`pl_inf_diario`) monta a lista de meses e chama o filho
+(`pl_inf_diario_mes`) uma vez por mês. O filho pode ser executado e testado sozinho, e reprocessar
+um mês é chamar o pai com aquele mês na lista (D6). Dois gatilhos seguem o contrato da fonte (D3):
 
-| Gatilho | Quando | Meses (`janela`) | Por quê |
+| Gatilho | Quando | Meses | Por quê |
 |---|---|---|---|
 | `tr_diario` | seg a sáb, 10:00 (horário de Brasília) | M e M-1 | a CVM atualiza esses dois às 08:00 |
-| `tr_semanal` | domingo, 10:00 | M-2 a M-11 | atualização semanal da CVM |
+| `tr_semanal` | domingo, 10:00 | M-2 a M-11 | atualização semanal da CVM (premissa em D3) |
 | execução manual | sob demanda | lista explícita (`competencias`) | carga inicial e reprocessamento forçado |
+
+O pai tem `concurrency: 1`: uma execução que chega com outra em andamento (o semanal e uma manual,
+por exemplo) fica na fila, e duas cargas nunca mexem no mesmo mês ao mesmo tempo.
 
 ```mermaid
 flowchart TB
-    S["Início: parâmetros janela_inicio, janela_fim<br/>ou competencias"] --> L["Lookup / SetVariable:<br/>lista de competências AAAAMM"]
-    L --> F{"ForEach competência<br/>(lotes de 4, em paralelo)"}
-    F --> C1["Copy 1: HTTP → bronze<br/>bronze/.../competencia=AAAAMM/carga=RUN_ID/arquivo.zip"]
-    C1 --> C2["Copy 2: bronze ZIP → prata/_staging/carga=RUN_ID<br/>DelimitedText (ZipDeflate, ;, UTF-8) → Parquet,<br/>mapeamento explícito de tipos"]
-    C2 --> D["Delete: prata/.../competencia=AAAAMM/"]
-    D --> C3["Copy 3: _staging → prata/.../competencia=AAAAMM/"]
-    C3 --> FX["Azure Function: reconciliar(competência, RUN_ID)<br/>contagem + SHA-256 bronze × prata;<br/>refaz o ouro do mês; grava o manifesto"]
-    FX --> OK{"bateu?"}
-    OK -- sim --> FIM["Sucesso"]
-    OK -- não --> ERR["Fail activity → alerta"]
+    subgraph PAI["pl_inf_diario (concurrency 1)"]
+        S["Parâmetros: janela (M..M-n)<br/>ou competencias"] --> L["Lista de competências AAAAMM<br/>(expressão, fora do laço)"]
+        L --> F{"ForEach competência<br/>(lotes de 4, em paralelo)"}
+        F --> X["Execute Pipeline:<br/>pl_inf_diario_mes(competência, carga)"]
+    end
+    subgraph FILHO["pl_inf_diario_mes"]
+        C1["Passo 1: Copy: HTTP → bronze<br/>.../competencia=AAAAMM/carga=RUN_ID/arquivo.zip"]
+        C1 --> C2["Passo 2: Copy: ZIP da bronze → staging<br/>staging/.../carga=RUN_ID/competencia=AAAAMM/<br/>DelimitedText (ZipDeflate, ;) → Parquet"]
+        C2 --> V["Passo 3: Function validar:<br/>contagem + SHA-256 bronze × staging,<br/>chave única"]
+        V --> D["Passo 4: Delete: prata/.../competencia=AAAAMM/"]
+        D --> C3["Passo 5: Copy: staging → prata/.../competencia=AAAAMM/"]
+        C3 --> R["Passo 6: Function reconciliar:<br/>bronze × prata, refaz o ouro do mês,<br/>grava o manifesto do mês"]
+        R --> DS["Passo 7: Delete: staging da carga"]
+    end
+    X -.-> C1
 ```
 
 Pontos de desenho:
-- **Bronze é imutável e versionado** (D5). Cada carga grava em `carga=<RUN_ID>`, e nada é
+- **Bronze é imutável e versionada** (D5). Cada carga grava em `carga=<RUN_ID>`, e nada é
   sobrescrito. Dá para auditar o que a CVM publicou em cada dia e reprocessar sem baixar de novo.
   Uma regra de ciclo de vida apaga as versões com mais de 90 dias.
-- **Prata é substituída por mês inteiro**, nunca recebe append (D6). Reescrever a partição
-  inteira a partir da versão mais nova torna a carga **idempotente**: rodar duas vezes dá o mesmo
+- **A partição só é trocada depois de validada** (D6, D7). A versão nova vai primeiro para a
+  staging, e a Function confere contagem, hash e chave contra a bronze. Se diverge, a Function
+  responde erro, a atividade falha, e a prata continua com a versão anterior.
+- **Prata é substituída por mês inteiro**, nunca recebe append (D6). Rodar duas vezes dá o mesmo
   resultado, e uma reapresentação substitui a anterior sem deixar linhas velhas.
-- **Watermark = fronteira da janela mutável** (D3). O que é mais antigo que M-11 está congelado e
-  não volta a ser lido. O manifesto em `controle/` registra, por mês, a carga vigente, a
-  contagem, o hash e o `ETag` da origem.
-- **O Delete seguido de Copy não é atômico.** Entre os dois passos, um leitor concorrente veria o
-  mês vazio. Aqui o único leitor é a Function, chamada depois, no mesmo pipeline. Com leitores
-  concorrentes, a saída é um formato de tabela com transação (Delta Lake), registrada em D6 como
-  evolução.
-- **Falha não é silenciosa.** Se a reconciliação não bate, o pipeline falha (Fail activity), e o
-  alerta por métrica (`PipelineFailedRuns > 0`) manda e-mail.
+- **Janela de reprocessamento** (D3). O que é mais antigo que M-11 está congelado e não volta a
+  ser lido. O manifesto de cada mês registra a carga vigente, a contagem, o hash e o `ETag` da
+  origem.
+- **Cada mês escreve só nos próprios caminhos.** A staging e o manifesto têm a competência no
+  caminho, então os 4 meses em paralelo nunca gravam no mesmo arquivo.
+- **Na descompactação, `preserveZipFileNameAsFolder = false`.** Sem isso, o Copy cria uma subpasta
+  com o nome do ZIP, e os caminhos dos passos seguintes não batem. Os arquivos Parquet saem com o
+  nome que o Copy gera, e quem lê usa a pasta inteira (`.../competencia=AAAAMM/*.parquet`).
+- **O Delete seguido de Copy não é atômico.** Entre os passos 4 e 5, um leitor concorrente veria o
+  mês vazio. Se o passo 5 falhar, o mês fica vazio até a próxima carga, e o alerta avisa. Aqui o
+  único leitor é a Function, no passo 6. Com leitores concorrentes, a saída é um formato de tabela
+  com transação (Delta Lake), registrado em D6 como evolução.
+- **Retentativa só onde é segura.** Copy e Delete têm retentativa (2 vezes). As chamadas à
+  Function não têm, e a resposta dela tem de chegar em até 230 s, o limite do ADF para essa
+  atividade.
+- **Falha não é silenciosa.** A Function responde erro quando a prova não bate, o pipeline falha e
+  o alerta pela métrica de execuções com falha do ADF manda e-mail.
 
 ## 4. Camadas e layout no ADLS
 
-Uma conta de armazenamento por ambiente, com namespace hierárquico (é isso que a torna ADLS
-Gen2), e um container por camada:
+Uma conta de armazenamento por ambiente para o lake, com namespace hierárquico (é isso que a
+torna ADLS Gen2), e um container por camada:
 
 ```
 bronze/cvm/inf_diario/competencia=202609/carga=<RUN_ID>/inf_diario_fi_202609.zip
-prata/cvm/inf_diario/competencia=202609/part-00000.parquet
-prata/cvm/inf_diario/_staging/carga=<RUN_ID>/...
-ouro/cvm/inf_diario_mensal/competencia=202609/part-00000.parquet
-controle/cvm/inf_diario/manifesto.json
-controle/cvm/inf_diario/reconciliacao/carga=<RUN_ID>.json
+staging/cvm/inf_diario/carga=<RUN_ID>/competencia=202609/*.parquet
+prata/cvm/inf_diario/competencia=202609/*.parquet
+ouro/cvm/inf_diario_mensal/competencia=202609/*.parquet
+controle/cvm/inf_diario/competencia=202609/manifesto.json
+controle/cvm/inf_diario/competencia=202609/carga=<RUN_ID>.json
 ```
 
 | Camada | Conteúdo | Regra |
 |---|---|---|
 | bronze | o ZIP exatamente como veio | imutável; uma versão por carga; ciclo de vida de 90 dias |
-| prata | Parquet com os tipos do dicionário da CVM (`date`, `decimal(17,2)`, `decimal(27,12)` para a cota, `int`) | uma partição por mês; substituída inteira; chave única (D4) |
+| staging | o Parquet da carga, antes de validar | apagado no fim da carga; ciclo de vida de 7 dias para o que sobrar de uma falha |
+| prata | Parquet com os campos do dicionário da CVM (data, decimal, inteiro) | uma partição por mês; substituída inteira; chave única (D4) |
 | ouro | por fundo/classe, subclasse e mês: PL e cotistas no último dia, captação, resgate e captação líquida no mês, variação da cota no mês | refeito por mês a partir da prata |
-| controle | manifesto (mês → carga vigente, linhas, hash, ETag) e um relatório por carga | escrito pela Function, lido pelo pipeline e pelos testes |
+| controle | por mês: o manifesto (carga vigente, linhas, hash, ETag) e um relatório por carga | escrito pela Function, um arquivo por mês |
+
+**Tipos na prata.** O tipo físico que o Copy do ADF grava no Parquet (precisão e escala do
+decimal, `DATE` ou timestamp) só se confirma executando na Azure. A reconciliação converte os dois
+lados para a escala do dicionário antes do hash, e uma divergência derruba a carga em vez de passar
+em silêncio. Se o Copy não gravar os tipos do dicionário, vale o plano B (D2b).
 
 ## 5. A prova: contagem e hash por mês
 
-A reconciliação (D7) responde a duas perguntas para cada mês carregado:
-1. **Não perdeu e não duplicou?** A contagem de linhas do CSV na bronze é igual à da prata, e a
-   chave natural é única na prata.
-2. **Não alterou nada no caminho?** O SHA-256 do conteúdo canônico da bronze é igual ao da prata.
+A validação (antes da troca) e a reconciliação (depois) respondem às mesmas perguntas (D7):
+1. **Não perdeu e não duplicou?** A contagem de linhas do CSV na bronze é igual à do Parquet, e a
+   chave natural é única.
+2. **Não alterou nada no caminho?** O SHA-256 do conteúdo canônico da bronze é igual ao do Parquet.
    O conteúdo canônico são as linhas ordenadas pela chave, com cada campo num formato fixo
    (decimal com a escala do dicionário, data ISO, vazio = nulo), o que torna o hash independente
    do formato do arquivo.
 
-E a uma pergunta do ouro: a soma das linhas agregadas por mês é igual às linhas da prata.
+A reconciliação ainda confere que o ouro soma as mesmas linhas da prata. A Function responde
+sempre um objeto JSON (`ok`, contagens, hashes), como o ADF exige.
 
 **A republicação é simulada**, porque não dá para pedir à CVM que reapresente um mês. Duas
 versões do mesmo mês (T0, a real, e T1, com linhas alteradas, uma removida e uma incluída) passam
@@ -160,8 +189,8 @@ pelo pipeline em sequência. O resultado esperado:
 flowchart LR
     DEV["Desenvolvedor<br/>JSON do ADF + Terraform<br/>+ Function no GitHub"] -- "push / PR" --> GHA["GitHub Actions (CI)<br/>lint, tipos, testes,<br/>terraform validate/test,<br/>validador do ADF"]
     DEV -- "merge na main" --> AZP
-    subgraph AZP["Azure Pipelines (agente próprio)"]
-        B1["Build<br/>validate + export do ARM<br/>(@microsoft/azure-data-factory-utilities)<br/>pacote da Function"] --> D1["Deploy dev<br/>terraform apply<br/>para gatilhos → ARM → religa"]
+    subgraph AZP["Azure Pipelines (agente próprio, pr: none)"]
+        B1["Build<br/>validate + export do ARM<br/>(@microsoft/azure-data-factory-utilities)<br/>pacote da Function"] --> D1["Deploy dev<br/>terraform apply → Function<br/>→ para gatilhos → ARM → religa"]
         D1 --> A{"Aprovação<br/>(environment prod)"}
         A --> P1["Deploy prod<br/>mesmos passos,<br/>parâmetros de prod"]
     end
@@ -169,54 +198,59 @@ flowchart LR
 
 - **Dois ambientes completos** (dev e prod), cada um no próprio resource group, com o mesmo
   Terraform e um arquivo de variáveis por ambiente (D8).
-- **O ADF de dev pode ser ligado ao GitHub** (integração Git) para quem prefere editar no ADF
-  Studio. A fonte da verdade é o JSON no repositório. Prod nunca é editado à mão: só recebe o ARM
-  gerado no build (D9).
+- **O JSON no repositório é a fonte da verdade** (D9). Nenhum ambiente é editado à mão: os dois
+  recebem o ARM gerado no build.
 - **Publicação moderna:** o pacote npm da Microsoft valida a fábrica e exporta o ARM no CI, sem o
   botão "Publish" nem o branch `adf_publish` (D9).
-- **Gatilhos param antes do deploy e voltam depois**, com o script que a Microsoft documenta para
-  isso, porque o ARM não atualiza um gatilho que está rodando.
+- **A Function sobe antes do ADF**, porque o linked service do ADF aponta para ela.
+- **Gatilhos param antes do deploy e voltam depois**, com o script em PowerShell que a Microsoft
+  publica para isso, porque o ARM não atualiza um gatilho que está rodando.
 - **Autenticação do pipeline sem segredo:** service connection por federação de identidade
   (*workload identity federation*) (D10).
-- **Agente próprio** (auto-hospedado), por custo e por não depender de concessão de paralelismo
-  (D10).
+- **Agente próprio** (auto-hospedado), que nunca roda código de terceiros: o pipeline de deploy
+  não dispara em PR, e o build de PR de fork fica desligado na organização (D10).
 
 ## 7. Segurança
 
 | Tema | Desenho |
 |---|---|
-| Acesso ao lake | Identidade gerenciada do ADF e da Function com `Storage Blob Data Contributor` só na conta do ambiente. A chave de acesso compartilhada da conta fica **desligada** (`shared_access_key_enabled = false`) |
+| Acesso ao lake | Identidade gerenciada do ADF e da Function com `Storage Blob Data Contributor` só na conta do lake do ambiente. A chave de acesso compartilhada da conta do lake fica **desligada** |
+| Armazenamento da Function | O host da Function (plano Flex Consumption) usa uma conta de armazenamento própria, acessada pela identidade gerenciada, separada do lake (D2) |
 | Segredos | Só um: a chave da Function, que o ADF lê do Key Vault pela identidade gerenciada (`Key Vault Secrets User`). A fonte é pública e anônima, então não há credencial de origem (D11) |
-| Deploy | Federação de identidade, sem senha de service principal no Azure DevOps. A identidade do pipeline tem `Contributor` no resource group e `Role Based Access Control Administrator` com condição (só pode atribuir os 3 papéis acima) |
-| Rede | Endpoints públicos com TLS 1.2 mínimo e sem acesso anônimo a blob. Endpoint privado e VNet gerenciada ficam fora por custo (limite declarado) |
+| Deploy | Federação de identidade, sem senha de service principal no Azure DevOps. A identidade do pipeline tem `Contributor` no resource group e `Role Based Access Control Administrator` com condição: só pode atribuir `Storage Blob Data Contributor` e `Key Vault Secrets User` (e os papéis do armazenamento do host, fechados na infraestrutura), e só a principais de serviço |
+| Agente | Pipeline de deploy com `pr: none` e build de PR de fork desligado na organização (D10) |
+| Rede | Endpoints públicos com TLS 1.2 mínimo e sem acesso anônimo a blob. Endpoint privado e VNet gerenciada ficam fora por custo (D12) |
 | Repositório | Nenhum ID de assinatura, tenant ou segredo versionado: vão em variáveis do pipeline e em `*.tfvars` fora do Git |
 
 ## 8. Custo estimado
 
-Estimativa para um mês de operação, com preços públicos de varejo (USD, east US 2). Os valores
-serão conferidos na API de preços da Azure antes de qualquer execução. Não é medição.
+Estimativa para um mês de operação. Não é medição. Os preços são os públicos de varejo (USD, east
+US 2, pela Retail Prices API da Azure em 19/11/2026) e serão conferidos na calculadora de preços
+antes de qualquer execução.
+
+Um mês de operação são ~92 cargas de mês: 2 meses × ~26 dias do gatilho diário + 10 meses × ~4
+domingos do semanal.
 
 | Item | Uso | Ordem de grandeza |
 |---|---|---|
-| ADF: execuções de atividade | ~2 meses × 5 atividades × 26 dias + ~10 meses × 5 × 4 domingos ≈ 460 | ~US$ 0,50 |
-| ADF: cópia (DIU-hora) | ~3 cópias por mês carregado, poucos segundos cada (cobrança mínima de 1 minuto) | alguns dólares |
+| ADF: execuções de atividade | ~92 cargas × ~8 atividades (com o Execute Pipeline) ≈ 750; contagem exata a conferir na calculadora | ~US$ 1 por 1.000 execuções |
+| ADF: cópia (DIU-hora) | 3 cópias por carga, poucos segundos cada (cobrança mínima de 1 minuto) | alguns dólares |
 | ADLS Gen2 | ~1 GB (bronze com 90 dias + prata + ouro) | centavos |
-| Function (consumo) | ~150 chamadas de segundos | dentro da franquia mensal |
+| Function (Flex Consumption) | ~184 chamadas de segundos (2 por carga) | a conferir na calculadora |
 | Key Vault | poucas leituras de segredo | centavos |
-| Azure DevOps | 1 usuário Basic + agente próprio | grátis |
+| Azure DevOps | 1 usuário Basic; agente próprio (o *tier* auto-hospedado inclui 1 job paralelo sem limite de tempo) | a máquina do agente é de quem implanta |
 
 Fora de propósito, por serem os medidores caros: Data Flow, VNet gerenciada, Log Analytics,
 endpoint privado. As travas de custo para quem for implantar estão no
 [`runbook.md`](runbook.md).
 
-## 9. Limites declarados
+## 9. Limites do desenho
 
-- **Desenho de referência, validado localmente; não aplicado na Azure.** O que roda na máquina e
-  o que só a Azure confirma está em [`testes.md`](testes.md).
-- A tese é provada pela execução local da mesma lógica (mesmas pastas, mesma janela, mesma
-  reconciliação). A equivalência com o ADF executando só se confirma implantando.
+A declaração geral (o que foi validado e o que não foi aplicado) está nos
+[Limites declarados do README](../README.md#limites-declarados). Limites próprios do desenho:
 - A republicação é simulada (T0 → T1).
-- Um leitor concorrente pode ver o mês vazio entre o Delete e o Copy (seção 3).
+- Se o Copy do passo 5 falhar, o mês fica vazio na prata até a próxima carga (seção 3).
+- O dia da atualização semanal da CVM é uma premissa observada, não um contrato (D3).
 - Só o Informe Diário dos últimos 12 meses. O histórico anual (`DADOS/HIST/`) fica fora.
 - A variação da cota no mês usa o primeiro e o último dia com informe no mês, e não o último dia
   do mês anterior.

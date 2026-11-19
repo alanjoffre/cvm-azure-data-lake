@@ -2,8 +2,8 @@
 
 [![Licença: MIT](https://img.shields.io/badge/licença-MIT-22c55e)](LICENSE)
 
-Carga incremental de uma fonte pública que **reescreve o próprio passado**, com Azure Data
-Factory, ADLS Gen2 em camadas (bronze, prata e ouro), Terraform e CI/CD no Azure Pipelines.
+Recarga da janela mutável de uma fonte pública que **reescreve o próprio passado**, com Azure
+Data Factory, ADLS Gen2 em camadas (bronze, prata e ouro), Terraform e CI/CD no Azure Pipelines.
 
 A fonte é o Informe Diário de fundos de investimento da CVM. Todo dia ela regrava o mês corrente
 e o anterior, e toda semana os dez meses antes deles. Carregar só o mês novo deixa o lake errado
@@ -16,9 +16,9 @@ duplicar e sem perder linha, e provar isso**.
 
 | | |
 |---|---|
-| **O que é** | CVM (ZIP por mês) → ADF (Copy) → ADLS Gen2: bronze (ZIP original, versionado) → prata (Parquet tipado, uma partição por mês) → ouro (indicadores por fundo e mês, Azure Function com DuckDB) |
+| **O que é** | CVM (ZIP por mês) → ADF (Copy) → ADLS Gen2: bronze (ZIP original, versionado) → prata (Parquet, uma partição por mês, trocada só depois de validada) → ouro (indicadores por fundo e mês, Azure Function com DuckDB) |
 | **Com que dado** | Informe Diário da CVM: ~540 mil linhas por mês, 12 meses na janela. Baixado na execução, nunca versionado ([D1](docs/decisoes.md#d1-dado-público-real-baixado-na-execução-e-nunca-versionado)) |
-| **Garantia** | Carga idempotente por substituição do mês inteiro: reexecutar não muda nada, e uma linha que a fonte removeu some do destino ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-em-parquet)) |
+| **Garantia** | No desenho, cada carga substitui o mês inteiro, só depois de validá-lo: reexecutar produz o mesmo resultado, e uma linha que a fonte removeu some do destino ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-só-depois-de-validada)). A lógica (substituição, contagem, hash) é provada na máquina com o dado real da CVM; o ADF executando não foi testado |
 | **Como se prova** | Contagem e SHA-256 canônico por mês, bronze × prata, e uma republicação simulada (T0 → T1) que só pode mudar o mês republicado ([D7](docs/decisoes.md#d7-a-prova-contagem-e-sha-256-canônico-por-mês-e-republicação-simulada)) |
 | **Infra e entrega** | Terraform (dev e prod), identidade gerenciada, Key Vault, GitHub Actions no CI e Azure Pipelines com aprovação de dev para prod |
 | **O que não é** | Não foi aplicado na Azure: é o desenho de referência, com tudo que roda fora da nuvem validado na máquina e o roteiro de implantação em [`docs/runbook.md`](docs/runbook.md) (ver [Limites declarados](#limites-declarados)) |
@@ -58,7 +58,7 @@ Detalhes, layout do lake, segurança, ambientes e custo estimado: [`docs/arquite
   A equivalência com o ADF executando só se confirma implantando.
 - A republicação é simulada: a CVM não reapresenta um mês a pedido.
 - Entre apagar e regravar a partição, um leitor concorrente veria o mês vazio. O único leitor é
-  a etapa seguinte do próprio pipeline ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-em-parquet)).
+  a etapa seguinte do próprio pipeline ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-só-depois-de-validada)).
 - Só os últimos 12 meses do Informe Diário.
 
 ## Fonte do dado

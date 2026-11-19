@@ -1,8 +1,6 @@
 # Runbook: implantar na Azure
 
 Passo a passo para implantar o desenho numa assinatura da Azure, pelo portal e pela CLI.
-Nada aqui foi aplicado: é o roteiro de implantação (ver
-[Limites declarados](../README.md#limites-declarados)).
 
 > Em construção. As seções abaixo são o índice; o conteúdo entra com o Terraform, o ADF e o
 > pipeline.
@@ -18,9 +16,18 @@ Nada aqui foi aplicado: é o roteiro de implantação (ver
 
 ## 1. Estado remoto do Terraform
 
+Quem cria o resource group e a conta de armazenamento do estado, e com que permissão de dados
+o Terraform lê e grava o estado sem chave compartilhada.
+
 ## 2. Organização e projeto no Azure DevOps
 
+Ligar ao repositório do GitHub; desligar o build de PR de fork (*Limit building pull requests
+from forked GitHub repositories*).
+
 ## 3. Agente próprio (Linux)
+
+Instalação do agente, `pwsh` e o módulo Az (para o script de parar e religar os gatilhos), Node
+(para o pacote do ADF) e Terraform.
 
 ## 4. Service connection por federação de identidade
 
@@ -28,12 +35,18 @@ Nada aqui foi aplicado: é o roteiro de implantação (ver
 
 ## 6. Primeira execução: `terraform apply` em dev
 
-## 7. Deploy do ADF e da Function em dev
+## 7. Deploy em dev: primeiro a Function, depois o ADF
+
+O linked service do ADF aponta para a Function, então ela sobe antes.
 
 ## 8. Carga inicial (12 meses) e conferência da reconciliação
 
 ## 9. Republicação simulada na Azure
 
-## 10. Promoção para prod
+## 10. Conferir o que só a Azure confirma
 
-## 11. Destruir tudo e conferir que não sobrou recurso
+A lista de [`testes.md`](testes.md#só-na-azure), item por item.
+
+## 11. Promoção para prod
+
+## 12. Destruir tudo e conferir que não sobrou recurso
