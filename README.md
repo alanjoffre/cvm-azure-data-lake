@@ -46,7 +46,7 @@ Detalhes, layout do lake, segurança, ambientes e custo estimado: [`docs/arquite
 |---|---|
 | Desenho e decisões | pronto |
 | Carga local e prova com o dado da CVM | pronto: 32 de 32 checagens com os arquivos reais de set, out e nov/2026 ([relatório](reports/prova.md)) |
-| Terraform | em construção |
+| Terraform | pronto: dev e prod pelo mesmo módulo, bootstrap do estado e das permissões; `fmt`, `validate`, tflint, Checkov e 16 testes com provider simulado ([`infra/`](infra/README.md)) |
 | ADF (JSON) | em construção |
 | CI/CD e runbook | em construção |
 
@@ -71,6 +71,12 @@ uv run cvm-lake prova --limpar                  # grava reports/prova.md e repor
 A prova roda sobre um lake vazio em `saida/prova`: carga inicial, reexecução, republicação
 simulada de um mês e uma divergência injetada na staging. Ela termina com código 1 se qualquer
 checagem falhar.
+
+O Terraform se valida sem conta na Azure (precisa de Terraform, tflint e uv):
+
+```bash
+infra/validar.sh      # fmt, validate, tflint, Checkov e terraform test com provider simulado
+```
 
 ## Limites declarados
 

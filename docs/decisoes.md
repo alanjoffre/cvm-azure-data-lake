@@ -44,7 +44,13 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
 - **Contexto:** o mapeamento de tipos da atividade Copy não expõe precisão e escala do decimal, e
   o tipo de data que ela grava no Parquet só se confirma executando.
 - **Decisão:** se o Copy não gravar os tipos do dicionário, a Function escreve a prata com o
-  DuckDB (`COPY ... TO 'abfss://...' (FORMAT parquet)`), e o ADF fica com o download e a bronze.
+  DuckDB, do mesmo jeito que já escreve o ouro: o Parquet é gerado no disco temporário da
+  Function e gravado no lake pelo SDK do ADLS (`azure-storage-file-datalake`) com a identidade
+  gerenciada. O ADF fica com o download e a bronze.
+- **Por que não gravar direto em `abfss://`:** a extensão `azure` do DuckDB é usada só para ler.
+  Gravar por ela não está confirmado, e o protocolo de armazenamento da Function
+  ([`armazenamento.py`](../src/cvm_lake/funcao/armazenamento.py)) já grava bytes, com o mesmo
+  código na máquina e na Azure.
 - **Consequência:** o ADF faz menos e a Function faz mais. A reconciliação não muda: ela tipa o
   Parquet pelo dicionário e acusa pelo hash qualquer valor que o tipo físico tenha alterado.
   Medido no dado real, uma cota gravada como double mudaria em 1.923 linhas de setembro de 2026
@@ -136,6 +142,10 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   variáveis por ambiente. Cada ambiente tem o próprio resource group, conta de armazenamento do
   lake, ADF, Function (com o armazenamento do host), Key Vault, alerta e orçamento. O estado remoto
   fica num container à parte, criado no passo 1 do runbook.
+- **Bootstrap separado:** o que a identidade do pipeline não pode criar sozinha fica em
+  [`infra/bootstrap/`](../infra/bootstrap/), aplicado uma vez por quem tem Owner na assinatura:
+  a conta do estado, os resource groups de dev e prod e as permissões do pipeline. Assim o
+  pipeline recebe `Contributor` só dentro de cada resource group, e não na assinatura.
 - **Consequência:** `terraform destroy` encerra tudo, o que importa para não deixar custo
   correndo. Os IDs de assinatura e tenant ficam fora do repositório.
 
@@ -183,6 +193,10 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   O único segredo é a chave da Function que o ADF usa para chamá-la.
 - **Decisão:** a chave da Function fica no Key Vault (autorização por RBAC, não por política de
   acesso), e o ADF a lê com a própria identidade gerenciada.
+- **O segredo não passa pelo Terraform:** o Terraform cria o cofre, mas não o segredo. Um
+  segredo criado por ele ficaria em texto no estado. A chave só existe depois que o código da
+  Function é publicado; a etapa de deploy cria a chave e a grava no cofre pela CLI, com o papel
+  `Key Vault Secrets Officer` que o Terraform dá à identidade do pipeline nesse cofre.
 - **Alternativa avaliada e descartada:** a atividade Azure Function aceita identidade gerenciada
   ([Azure Function activity](https://learn.microsoft.com/en-us/azure/data-factory/control-flow-azure-function-activity)),
   mas a forma segura exige registro de aplicativo e autenticação na própria Function (*Easy

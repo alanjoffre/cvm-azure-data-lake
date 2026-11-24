@@ -215,12 +215,12 @@ flowchart LR
 | Tema | Desenho |
 |---|---|
 | Acesso ao lake | Identidade gerenciada do ADF e da Function com `Storage Blob Data Contributor` só na conta do lake do ambiente. A chave de acesso compartilhada da conta do lake fica **desligada** |
-| Armazenamento da Function | O host da Function (plano Flex Consumption) usa uma conta de armazenamento própria, acessada pela identidade gerenciada, separada do lake (D2) |
-| Segredos | Só um: a chave da Function, que o ADF lê do Key Vault pela identidade gerenciada (`Key Vault Secrets User`). A fonte é pública e anônima, então não há credencial de origem (D11) |
-| Deploy | Federação de identidade, sem senha de service principal no Azure DevOps. A identidade do pipeline tem `Contributor` no resource group e `Role Based Access Control Administrator` com condição: só pode atribuir `Storage Blob Data Contributor` e `Key Vault Secrets User` (e os papéis do armazenamento do host, fechados na infraestrutura), e só a principais de serviço |
+| Armazenamento da Function | O host da Function (plano Flex Consumption) usa uma conta de armazenamento própria, também sem chave compartilhada, acessada pela identidade gerenciada: `Storage Blob Data Owner` e `Storage Table Data Contributor` só nessa conta, o mínimo que a Microsoft documenta para o host. O pacote publicado fica num container dela (D2) |
+| Segredos | Só um: a chave da Function, que o ADF lê do Key Vault pela identidade gerenciada (`Key Vault Secrets User`). O deploy grava a chave no cofre (`Key Vault Secrets Officer`), e ela nunca passa pelo estado do Terraform. A fonte é pública e anônima, então não há credencial de origem (D11) |
+| Deploy | Federação de identidade, sem senha de service principal no Azure DevOps. A identidade do pipeline tem `Contributor` no resource group de cada ambiente e `Role Based Access Control Administrator` com condição: só cria e remove atribuições dos 5 papéis de [`papeis_atribuiveis.json`](../infra/papeis_atribuiveis.json) (`Storage Blob Data Contributor`, `Storage Blob Data Owner`, `Storage Table Data Contributor`, `Key Vault Secrets User` e `Key Vault Secrets Officer`), e só a principais de serviço. O módulo do ambiente lê a mesma lista: um papel fora dela quebra o plano. No estado remoto, só `Storage Blob Data Contributor` no container do estado |
 | Agente | Pipeline de deploy com `pr: none` e build de PR de fork desligado na organização (D10) |
 | Rede | Endpoints públicos com TLS 1.2 mínimo e sem acesso anônimo a blob. Endpoint privado e VNet gerenciada ficam fora por custo (D12) |
-| Repositório | Nenhum ID de assinatura, tenant ou segredo versionado: vão em variáveis do pipeline e em `*.tfvars` fora do Git |
+| Repositório | Nenhum ID de assinatura, tenant ou segredo versionado: a assinatura e o tenant chegam por `ARM_*`, os e-mails de alerta por `TF_VAR_emails_alerta` e a conta do estado por `-backend-config`, todos variáveis do pipeline |
 
 ## 8. Custo estimado
 
