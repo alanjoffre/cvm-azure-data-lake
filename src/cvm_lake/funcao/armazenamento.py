@@ -3,9 +3,8 @@
 A Function só lê bytes (o ZIP da bronze), lê Parquet pelo DuckDB e grava bytes (JSON do controle
 e o Parquet do ouro). Todo o resto (apagar e copiar partição) é trabalho do ADF.
 
-A implementação para o ADLS Gen2 (SDK ``azure-storage-file-datalake`` com a identidade gerenciada
-e a extensão ``azure`` do DuckDB para leitura) entra com o empacotamento da Function. Ela cumpre
-o mesmo protocolo, e por isso nada em ``prova.py`` muda.
+A implementação para o ADLS Gen2 está em ``adls.py`` (SDK ``azure-storage-file-datalake`` com a
+identidade gerenciada). Ela cumpre o mesmo protocolo, e por isso nada em ``prova.py`` muda.
 """
 
 from __future__ import annotations
@@ -20,6 +19,8 @@ class Armazenamento(Protocol):
     def gravar_bytes(self, caminho: str, conteudo: bytes) -> None: ...
 
     def existe(self, caminho: str) -> bool: ...
+
+    def tamanho(self, caminho: str) -> int: ...
 
     def caminho_duckdb(self, caminho: str) -> str:
         """Caminho (ou glob) no formato que o ``read_parquet`` do DuckDB entende."""
@@ -41,6 +42,9 @@ class ArmazenamentoLocal:
 
     def existe(self, caminho: str) -> bool:
         return Path(caminho).exists()
+
+    def tamanho(self, caminho: str) -> int:
+        return Path(caminho).stat().st_size
 
     def caminho_duckdb(self, caminho: str) -> str:
         return caminho

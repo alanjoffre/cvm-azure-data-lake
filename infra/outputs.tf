@@ -37,3 +37,8 @@ output "papeis_atribuidos" {
   description = "Papéis que o ambiente atribui."
   value       = module.ambiente.papeis_atribuidos
 }
+
+output "resource_group_name" {
+  description = "Resource group do ambiente (o deploy do ARM e da Function)."
+  value       = var.resource_group_name
+}

@@ -1,0 +1,78 @@
+# Azure Pipelines: CI → deploy em dev → aprovação → deploy em prod.
+#
+# Cada push na main roda o CI no agente próprio e publica dois artefatos: o ARM do ADF e o zip da
+# Function. O mesmo par vai para dev e, depois da aprovação, para prod: prod recebe exatamente o
+# que passou em dev, sem rebuild. A configuração fora deste arquivo (pool, service connection,
+# grupo de variáveis, aprovações) está no docs/runbook.md.
+#
+# Nada aqui guarda segredo ou ID: a autenticação é a federação de identidade da service
+# connection (sem segredo de cliente) e os valores do ambiente vêm do grupo de variáveis.
+
+trigger:
+  branches:
+    include: [main]
+
+# Nenhum pull request roda este pipeline. Ele tem a service connection e o agente próprio: código
+# de um PR (sobretudo de fork) não pode executar com essas credenciais nem na máquina do agente.
+# O PR é validado pelo GitHub Actions (.github/workflows/ci.yml), sem credencial. Na interface,
+# "Build pull requests from forks of this repository" fica desligado também (runbook, passo 2).
+pr: none
+
+pool:
+  name: cvm-lake          # agente próprio (self-hosted), runbook, passo 3
+
+variables:
+  - group: cvm-lake       # TF_ESTADO_RG, TF_ESTADO_CONTA, TF_ESTADO_CONTAINER, EMAILS_ALERTA (secreta)
+
+stages:
+  - stage: ci
+    displayName: CI
+    jobs:
+      - job: validar
+        displayName: Testes, validação e pacotes
+        steps:
+          - checkout: self
+            clean: "true"
+
+          - script: uv sync --frozen --all-extras
+            displayName: Dependências (uv.lock)
+
+          - script: |
+              uv run ruff check .
+              uv run mypy
+              uv run pytest -q
+            displayName: ruff, mypy e pytest
+
+          - script: infra/validar.sh
+            displayName: Terraform (fmt, validate, tflint, Checkov, terraform test)
+
+          - script: ci/adf/validar.sh
+            displayName: ADF (validate e export do ARM pelo pacote da Microsoft)
+
+          - script: ci/adf/armttk.sh
+            displayName: arm-ttk sobre o ARM exportado
+
+          - script: uv run python ci/funcao/empacotar.py
+            displayName: Pacote da Function
+
+          - publish: saida/arm
+            artifact: arm
+            displayName: Artefato do ARM
+
+          - publish: saida/funcao.zip
+            artifact: funcao
+            displayName: Artefato da Function
+
+  - template: ci/azure/deploy.yml
+    parameters:
+      ambiente: dev
+      depoisDe: ci
+      conexao: sc-cvm-lake   # service connection por federação, runbook, passo 4
+
+  # Mesmo template, com a aprovação configurada no environment cvm-lake-prod (runbook, passo 5):
+  # o estágio do deploy só começa depois de alguém aprovar o plano que o estágio anterior mostrou.
+  - template: ci/azure/deploy.yml
+    parameters:
+      ambiente: prod
+      depoisDe: deploy_dev
+      conexao: sc-cvm-lake   # service connection por federação, runbook, passo 4

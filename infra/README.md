@@ -51,7 +51,7 @@ papel a pessoas nem a grupos.
 
 ## Validar
 
-Precisa de Terraform 1.9+, [tflint](https://github.com/terraform-linters/tflint) e
+Precisa de Terraform 1.11.2+, [tflint](https://github.com/terraform-linters/tflint) e
 [uv](https://docs.astral.sh/uv/) (para o Checkov).
 
 ```bash

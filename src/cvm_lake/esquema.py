@@ -124,6 +124,18 @@ def sql_resumo(tabela_tipada: str) -> str:
     """
 
 
+def sql_fora_da_competencia(tabela_tipada: str, competencia: str) -> str:
+    """Conta as linhas cuja ``DT_COMPTC`` não cai no mês da partição (AAAAMM já conferido).
+
+    A chave é única dentro da partição; entre partições, "não duplica" depende de cada linha
+    estar no mês do arquivo. Isto confere a premissa em vez de assumi-la.
+    """
+    if not (len(competencia) == 6 and competencia.isascii() and competencia.isdigit()):
+        raise ValueError(f"competência inválida: {competencia!r}")
+    return (f"SELECT count(*) FROM {tabela_tipada} "
+            f"WHERE strftime({_q('DT_COMPTC')}, '%Y%m') <> '{competencia}'")
+
+
 def sql_fora_do_dicionario(tabela_texto: str) -> str:
     """Conta, no CSV ainda em texto, os valores que não casam com o padrão do dicionário."""
     condicoes = []

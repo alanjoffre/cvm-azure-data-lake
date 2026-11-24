@@ -24,13 +24,18 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   exigem lógica. No ADF, as opções são Data Flow (cluster Spark gerenciado, cobrado por tempo de
   uso) ou chamar código externo.
 - **Decisão:** o ADF faz as cópias (origem → bronze → staging → prata). Uma Azure Function em
-  Python, no plano Flex Consumption (o plano de consumo atual), faz a validação, o ouro e a
+  Python, no plano Flex Consumption (o plano *serverless* que a Microsoft recomenda para apps
+  novos), faz a validação, o ouro e a
   reconciliação com DuckDB, e o ADF a chama pela atividade Azure Function. Com ~540 mil linhas por
   mês, o DuckDB resolve em memória em segundos. A Function lê o ZIP da bronze com o `zipfile` do
-  Python (11 MB cabem em memória) e o Parquet pela extensão `azure` do DuckDB, com a identidade
-  gerenciada.
+  Python (11 MB cabem em memória). O Parquet da partição é baixado pelo SDK do ADLS, com a
+  identidade gerenciada, para o disco temporário da Function, e o DuckDB lê de lá
+  ([`adls.py`](../src/cvm_lake/funcao/adls.py)). A extensão `azure` do DuckDB leria direto do
+  lake, mas é baixada da internet no primeiro uso: a Function não depende disso para subir, e lê e
+  grava pelo mesmo cliente.
 - **Consequência:** nenhum cluster ligado e uma lógica testável com pytest, na máquina. O mesmo
-  módulo Python roda localmente (pastas) e na Function (`abfss://`). A atividade Azure Function do
+  módulo Python roda localmente (pastas) e na Function (endpoint dfs da conta, pelo SDK). A
+  atividade Azure Function do
   ADF espera a resposta em até 230 segundos e exige um objeto JSON como resposta: a Function
   devolve sempre `ok`, contagens e hashes, e o tempo medido na prova local mostra a folga.
 - **Armazenamento do host:** o Flex Consumption permite que o host da Function acesse a própria
@@ -50,10 +55,9 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   DuckDB, do mesmo jeito que já escreve o ouro: o Parquet é gerado no disco temporário da
   Function e gravado no lake pelo SDK do ADLS (`azure-storage-file-datalake`) com a identidade
   gerenciada. O ADF fica com o download e a bronze.
-- **Por que não gravar direto em `abfss://`:** a extensão `azure` do DuckDB é usada só para ler.
-  Gravar por ela não está confirmado, e o protocolo de armazenamento da Function
-  ([`armazenamento.py`](../src/cvm_lake/funcao/armazenamento.py)) já grava bytes, com o mesmo
-  código na máquina e na Azure.
+- **Por que pelo SDK:** a Function já lê e grava o lake pelo SDK (D2), e o protocolo de
+  armazenamento ([`armazenamento.py`](../src/cvm_lake/funcao/armazenamento.py)) já grava bytes,
+  com o mesmo código na máquina e na Azure.
 - **Consequência:** o ADF faz menos e a Function faz mais. A reconciliação não muda: ela tipa o
   Parquet pelo dicionário e acusa pelo hash qualquer valor que o tipo físico tenha alterado.
   Medido no dado real, uma cota gravada como double mudaria em 1.923 linhas de setembro de 2026
@@ -74,6 +78,11 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   `ETag` para isso. Quem lê o `ETag` e o `Last-Modified` é a entrada HTTP da Function, com um
   `HEAD` na URL do mês: o Copy não expõe os cabeçalhos da resposta, e a atividade Web não faz
   `HEAD` ([`adf.md`](adf.md#passos-3-e-6-o-contrato-com-a-function)).
+- **O `ETag` só vale se descrever o que foi carregado:** o `HEAD` acontece minutos depois do Copy.
+  Se a CVM regravar o mês nesse meio-tempo, o `ETag` é de outra versão. O manifesto guarda, ao lado
+  dele, o tamanho servido, o tamanho do ZIP da bronze e `confere_com_bronze`; a otimização só pode
+  pular um mês cujo registro tenha `confere_com_bronze` verdadeiro. Se o `HEAD` falhar, o manifesto
+  registra o erro e a carga segue: o dado já está provado, e o mês fica sem a otimização.
 - **Premissas e riscos aceitos:**
   - O contrato diz só "semanalmente". A regravação observada foi num sábado (14/11/2026), e o
     gatilho de domingo parte disso. Se a CVM mudar o dia, a janela semanal fica até uma semana
@@ -96,7 +105,8 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   guardá-la, não dá para responder "o que a CVM dizia na segunda?" nem reprocessar sem baixar
   de novo.
 - **Decisão:** cada carga grava o ZIP original em
-  `bronze/.../competencia=AAAAMM/carga=<RUN_ID>/`, sem sobrescrever. Uma regra de ciclo de vida
+  `bronze/.../competencia=AAAAMM/carga=<RUN_ID>/`, sem sobrescrever entre cargas (dentro da
+  mesma carga, a retentativa do Copy regrava o mesmo arquivo). Uma regra de ciclo de vida
   do armazenamento apaga as versões com mais de 90 dias.
 - **Consequência:** a bronze cresce ~11 MB por mês carregado por dia (ordem de 1 GB no teto de
   90 dias), centavos por mês. A prova de republicação confere que as duas versões estão lá.
@@ -108,17 +118,22 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
 - **Decisão:** a prata é particionada por mês de competência, e cada carga **substitui a
   partição inteira**. Por mês, um pipeline filho (`pl_inf_diario_mes`) copia a versão nova para a
   staging, a Function a valida contra a bronze, e só então o ADF apaga a partição e copia a
-  staging para ela. O pipeline pai tem `concurrency: 1`, e cada mês grava só nos próprios
-  caminhos (staging e manifesto com a competência no caminho).
+  staging para ela. O pipeline pai tem `concurrency: 1`, tira os meses repetidos da lista
+  (`union`) e cada mês grava só nos próprios caminhos (staging e manifesto com a competência no
+  caminho). A validação confere que toda linha tem `DT_COMPTC` no mês da partição: a chave só é
+  única dentro dela, e uma linha de outro mês duplicaria aquele mês no lake inteiro.
 - **Consequência:**
   - a carga é idempotente (reexecutar dá o mesmo resultado);
   - uma linha removida na republicação some da prata, o que um MERGE só por upsert não faria;
   - um dado que não passa na validação nunca substitui o bom;
-  - duas execuções nunca mexem no mesmo mês ao mesmo tempo.
+  - duas execuções do pai nunca mexem no mesmo mês ao mesmo tempo. Reprocessar é pelo pai, com
+    a lista; o filho disparado sozinho fura a fila do pai, e não se usa assim.
 - **Limite:** entre o Delete e o Copy final, um leitor concorrente veria a partição vazia, e se o
   Copy final falhar o mês fica vazio até a próxima carga (o alerta avisa). O único leitor é a
   Function, que roda depois. Com leitores concorrentes, a evolução é Delta Lake, em que a
-  substituição da partição é atômica.
+  substituição da partição é atômica. Se a reconciliação falhar depois da troca, a prata já é a
+  nova e o manifesto continua o anterior: o manifesto é a fonte de verdade do que está conferido,
+  o alerta avisa e a próxima carga refaz.
 - **Custo da validação antes da troca:** uma chamada à Function a mais por carga de mês.
 
 ## D7. A prova: contagem e SHA-256 canônico por mês, e republicação simulada
@@ -129,14 +144,15 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   prata) a contagem de linhas e o SHA-256 de uma **forma canônica**: linhas ordenadas pela chave
   (D4), cada campo num formato fixo (decimal com a escala do dicionário, data ISO, nulo
   explícito). Também confere que a chave é única e que o ouro soma as mesmas linhas da prata.
-  Divergência faz a Function responder erro e o pipeline falhar. O resultado vai para
+  Divergência faz a Function responder `ok: false` (HTTP 200), e a atividade Fail seguinte
+  derruba o pipeline. O resultado vai para
   `controle/`, um arquivo por mês.
 - **Republicação simulada:** a CVM não reapresenta um mês a pedido. A prova usa duas versões
   do mesmo mês: T0 (a real) e T1 (T0 com valores alterados, uma linha removida e uma incluída).
   Passam em sequência, e o teste cobra: a prata igual a T1; os outros meses com o hash anterior;
   a reexecução sem mudança; a bronze com as duas versões.
-- **Consequência:** a prova é a mesma na máquina e na Azure, porque é o mesmo módulo Python
-  (D2). Declarado: a republicação é simulada, e o hash só vale com os tipos da prata confirmados
+- **Consequência:** as checagens (contagem, hash, chave, ouro) são o mesmo código na máquina e
+  na Azure, porque é o mesmo módulo Python (D2); a republicação simulada só roda na máquina. Declarado: a republicação é simulada, e o hash só vale com os tipos da prata confirmados
   (D2b).
 
 ## D8. Infraestrutura em Terraform, dois ambientes iguais
@@ -165,9 +181,10 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   no repositório. O build valida e exporta o ARM com o pacote. Nenhum ambiente é editado à mão:
   dev e prod recebem o mesmo ARM, com parâmetros diferentes.
 - **Consequência:** o validador confere o JSON (esquema e referências entre recursos) e gera o
-  ARM. Não prova a execução, os tipos nem as permissões. Se ele roda sem conexão com a Azure é
-  algo a confirmar. Antes do deploy, os gatilhos são parados, e voltam depois, com o script em
-  PowerShell que a Microsoft publica para isso
+  ARM. Não prova a execução, os tipos nem as permissões. Ele não fala com a Azure, mas precisa
+  de internet para baixar o validador (o hash do bundle fica no log). Antes do deploy, os dois
+  gatilhos são parados (por padrão, o script só para os que mudaram), e voltam depois, com o
+  script em PowerShell que a Microsoft publica para isso
   ([sample pre- and post-deployment script](https://learn.microsoft.com/en-us/azure/data-factory/continuous-integration-delivery-sample-script)).
 
 ## D10. GitHub para o código; Azure Pipelines para o deploy, com agente próprio e federação
@@ -178,18 +195,22 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   1.800 minutos por mês. O *tier* auto-hospedado tem 1 job paralelo, sem limite de tempo, numa
   máquina própria
   ([parallel jobs](https://learn.microsoft.com/en-us/azure/devops/pipelines/licensing/concurrent-jobs)).
-- **Decisão:** o GitHub Actions roda o CI (lint, tipos, testes, validações) a cada push. O Azure
-  Pipelines faz o build do ARM e o deploy em dev, espera a aprovação do ambiente `prod` e faz o
-  deploy em prod. O agente é auto-hospedado (uma máquina Linux com `pwsh` e o módulo Az, para o
+- **Decisão:** o GitHub Actions roda o CI (lint, tipos, testes, validações) a cada push e pull
+  request, sem credencial ([`ci.yml`](../.github/workflows/ci.yml)). O Azure Pipelines
+  ([`azure-pipelines.yml`](../azure-pipelines.yml)) refaz o CI, gera o ARM e o pacote da Function,
+  e para cada ambiente roda o plano num estágio e o deploy em outro; o de prod espera a aprovação
+  do environment, e quem aprova lê o plano. O agente é auto-hospedado (uma máquina Linux com `pwsh` e o módulo Az, para o
   script dos gatilhos) e a service connection usa federação de identidade (*workload identity
   federation*), sem senha guardada.
 - **Agente próprio e repositório público:** por padrão, o Azure Pipelines dispara em PR vindo de
   fork ([GitHub repositories](https://learn.microsoft.com/en-us/azure/devops/pipelines/repos/github)).
   O pipeline de deploy usa `pr: none`, e a organização desliga o build de PR de fork (*Limit
   building pull requests from forked GitHub repositories*). Assim o agente, que tem a credencial
-  de deploy, nunca roda código de terceiros.
+  de deploy, nunca roda código de PR não revisado: só o que entrou na main.
 - **Consequência:** nenhum segredo de deploy no Azure DevOps. A máquina do agente é de quem
-  implanta. O CI do GitHub é o selo público; o Azure Pipelines é o caminho de produção, descrito
+  implanta. O estágio do plano de prod roda antes da aprovação, com a mesma conexão: quem faz
+  push na main roda código com acesso a prod. O *Branch control* na conexão limita isso à main;
+  a separação completa é uma segunda conexão, só de leitura, para os planos. O CI do GitHub é o selo público; o Azure Pipelines é o caminho de produção, descrito
   no runbook.
 
 ## D11. Key Vault só para o que é segredo

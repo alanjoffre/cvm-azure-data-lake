@@ -4,7 +4,7 @@
   "description": "Valida o JSON do ADF e exporta o ARM, sem conta na Azure.",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "build": "node node_modules/@microsoft/azure-data-factory-utilities/lib/index"

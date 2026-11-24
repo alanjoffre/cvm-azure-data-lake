@@ -1,0 +1,167 @@
+# Deploy de um ambiente: plano do Terraform → (aprovação no environment) → apply, Function, ADF.
+#
+# Dois estágios por ambiente. Os checks de um environment (a aprovação) são avaliados antes de o
+# estágio que o usa começar, para o estágio inteiro: no mesmo estágio, o plano também esperaria a
+# aprovação, e quem aprova não teria plano para ler. Por isso o plano roda num estágio sem
+# environment, e o estágio do deploy só começa depois dele.
+#
+# Ordem e porquê (docs/runbook.md, passo 7):
+#   1. plano      publica o .tfplan. A aprovação do environment é feita olhando este log, e o
+#                 apply aplica este arquivo, não um plano novo.
+#   2. apply      o Terraform cria ou ajusta o ambiente; as saídas viram variáveis do job.
+#   3. Function   antes do ADF: o linked service da Function lê no cofre a chave que este
+#                 passo grava (ci/deploy/funcao.sh).
+#   4. pré-script PrePostDeploymentScript.ps1 (gerado com o ARM). Sozinho, ele só para os
+#                 gatilhos cujo conteúdo mudou; com -ExplicitStopTriggerList, para os dois sempre.
+#                 -ArmTemplateParameters aponta os parâmetros deste ambiente: sem ele, o script
+#                 procura ArmTemplateParametersForFactory.json, e o export grava ARMTemplate...
+#                 (no Linux, o nome não casa e a comparação dos gatilhos fica sem os parâmetros).
+#   5. ARM        modo Incremental: o modo Complete apagaria do resource group tudo o que não
+#                 está no template, inclusive o lake e a Function.
+#   6. pós-script apaga do ADF o que saiu do JSON e religa os gatilhos com runtimeState Started.
+# Se o passo 5 falhar, os gatilhos ficam parados: nenhuma carga nova começa sobre um ADF pela
+# metade. Parar um gatilho não cancela uma execução que já começou.
+
+parameters:
+  - name: ambiente
+    type: string
+    values: [dev, prod]
+  - name: depoisDe
+    type: string
+  - name: conexao
+    type: string
+
+stages:
+  - stage: plano_${{ parameters.ambiente }}
+    displayName: Plano ${{ parameters.ambiente }}
+    dependsOn: ${{ parameters.depoisDe }}
+    # Só a main publica, mesmo numa execução manual de outro branch.
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: plano
+        displayName: Plano do Terraform (${{ parameters.ambiente }})
+        steps:
+          - checkout: self
+            clean: "true"
+
+          - task: AzureCLI@2
+            displayName: terraform plan
+            inputs:
+              azureSubscription: ${{ parameters.conexao }}
+              scriptType: bash
+              scriptLocation: scriptPath
+              scriptPath: ci/deploy/terraform.sh
+              arguments: plano ${{ parameters.ambiente }} $(Build.ArtifactStagingDirectory)/${{ parameters.ambiente }}.tfplan
+              addSpnToEnvironment: true
+            env:
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+              SYSTEM_OIDCREQUESTURI: $(System.OidcRequestUri)
+              TF_VAR_emails_alerta: $(EMAILS_ALERTA)   # secreta: só chega ao script mapeada aqui
+
+          # O .tfplan carrega os valores das variáveis (inclusive os e-mails do alerta) e o
+          # retrato do estado, com atributos sensíveis: é tratado como segredo. Fica no projeto
+          # privado do Azure DevOps e vence com a retenção curta da execução (runbook, passo 2).
+          - publish: $(Build.ArtifactStagingDirectory)/${{ parameters.ambiente }}.tfplan
+            artifact: plano_${{ parameters.ambiente }}
+            displayName: Artefato do plano
+
+  - stage: deploy_${{ parameters.ambiente }}
+    displayName: Deploy ${{ parameters.ambiente }}
+    dependsOn: plano_${{ parameters.ambiente }}
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: aplicar
+        displayName: Apply, Function e ADF (${{ parameters.ambiente }})
+        # Aprovação e demais checks ficam no environment, na interface (não existem em YAML).
+        environment: cvm-lake-${{ parameters.ambiente }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # O deployment job não clona o repositório sozinho; os scripts vêm deste commit.
+                - checkout: self
+                  clean: "true"
+                # Os três artefatos desta execução, nomeados: plano, ARM e pacote.
+                - download: current
+                  artifact: plano_${{ parameters.ambiente }}
+                - download: current
+                  artifact: arm
+                - download: current
+                  artifact: funcao
+
+                - task: AzureCLI@2
+                  displayName: terraform apply do plano aprovado
+                  inputs:
+                    azureSubscription: ${{ parameters.conexao }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    addSpnToEnvironment: true
+                    inlineScript: |
+                      set -euo pipefail
+                      ci/deploy/terraform.sh aplicar ${{ parameters.ambiente }} \
+                        "$(Pipeline.Workspace)/plano_${{ parameters.ambiente }}/${{ parameters.ambiente }}.tfplan" \
+                        "$(Agent.TempDirectory)/saidas.json"
+                      python3 ci/deploy/parametros_arm.py "$(Agent.TempDirectory)/saidas.json" \
+                        "$(Pipeline.Workspace)/arm/ARMTemplateParametersForFactory.json" \
+                        > "$(Agent.TempDirectory)/parametros.json"
+                      python3 ci/deploy/variaveis.py "$(Agent.TempDirectory)/saidas.json"
+                  env:
+                    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+                    SYSTEM_OIDCREQUESTURI: $(System.OidcRequestUri)
+
+                - task: AzureCLI@2
+                  displayName: Function (pacote, chave e segredo no cofre)
+                  inputs:
+                    azureSubscription: ${{ parameters.conexao }}
+                    scriptType: bash
+                    scriptLocation: scriptPath
+                    scriptPath: ci/deploy/funcao.sh
+                    arguments: $(resource_group_name) $(funcao_nome) $(key_vault_nome) $(Pipeline.Workspace)/funcao/funcao.zip
+
+                - task: AzurePowerShell@5
+                  displayName: ADF, pré-deploy (para os dois gatilhos)
+                  inputs:
+                    azureSubscription: ${{ parameters.conexao }}
+                    ScriptType: FilePath
+                    ScriptPath: $(Pipeline.Workspace)/arm/PrePostDeploymentScript.ps1
+                    ScriptArguments: >-
+                      -armTemplate "$(Pipeline.Workspace)/arm/ARMTemplateForFactory.json"
+                      -ArmTemplateParameters "$(Agent.TempDirectory)/parametros.json"
+                      -ResourceGroupName $(resource_group_name)
+                      -DataFactoryName $(adf_nome)
+                      -predeployment $true
+                      -deleteDeployment $false
+                      -ExplicitStopTriggerList tr_diario,tr_semanal
+                    azurePowerShellVersion: LatestVersion
+                    pwsh: true
+
+                - task: AzureCLI@2
+                  displayName: ADF, ARM em modo Incremental
+                  inputs:
+                    azureSubscription: ${{ parameters.conexao }}
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: >-
+                      az deployment group create
+                      --resource-group $(resource_group_name)
+                      --name adf-$(Build.BuildId)
+                      --mode Incremental
+                      --template-file "$(Pipeline.Workspace)/arm/ARMTemplateForFactory.json"
+                      --parameters "@$(Agent.TempDirectory)/parametros.json"
+                      --output none
+
+                - task: AzurePowerShell@5
+                  displayName: ADF, pós-deploy (limpa o que saiu e religa os gatilhos)
+                  inputs:
+                    azureSubscription: ${{ parameters.conexao }}
+                    ScriptType: FilePath
+                    ScriptPath: $(Pipeline.Workspace)/arm/PrePostDeploymentScript.ps1
+                    ScriptArguments: >-
+                      -armTemplate "$(Pipeline.Workspace)/arm/ARMTemplateForFactory.json"
+                      -ArmTemplateParameters "$(Agent.TempDirectory)/parametros.json"
+                      -ResourceGroupName $(resource_group_name)
+                      -DataFactoryName $(adf_nome)
+                      -predeployment $false
+                      -deleteDeployment $true
+                    azurePowerShellVersion: LatestVersion
+                    pwsh: true

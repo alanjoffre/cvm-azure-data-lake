@@ -12,7 +12,7 @@ import urllib.request
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from cvm_lake.lake import conferir_competencia
 
@@ -72,6 +72,24 @@ class OrigemHTTP:
         if tamanho is not None and int(tamanho) != len(conteudo):
             raise OSError(f"{url}: recebidos {len(conteudo)} bytes de {tamanho}")
         return Arquivo(conteudo, metadados_de(url, conteudo, etag, last_modified))
+
+    def cabecalhos(self, competencia: str) -> dict[str, Any]:
+        """``HEAD`` na URL do mês: os metadados que o manifesto guarda, sem baixar o arquivo (D3).
+
+        Na Azure quem baixa é o Copy do ADF, que não expõe os cabeçalhos da resposta. A Function
+        faz o ``HEAD`` na reconciliação, minutos depois da cópia.
+        """
+        url = f"{self.url_base}/{nome_arquivo(competencia)}"
+        pedido = urllib.request.Request(url, method="HEAD", headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(pedido, timeout=self.timeout) as resposta:
+            tamanho = resposta.headers.get("Content-Length")
+            return {
+                "url": url,
+                "etag": resposta.headers.get("ETag"),
+                "last_modified": resposta.headers.get("Last-Modified"),
+                "bytes": int(tamanho) if tamanho is not None else None,
+                "obtido_em": datetime.now(UTC).isoformat(timespec="seconds"),
+            }
 
 
 class OrigemPasta:

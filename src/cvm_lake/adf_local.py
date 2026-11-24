@@ -139,7 +139,7 @@ def pl_inf_diario(origem: Origem, lake: Lake, competencias: list[str], carga: st
     carga = carga or novo_run_id()
     resultados: list[Resposta] = []
     falhas: list[Exception] = []
-    for competencia in competencias:
+    for competencia in dict.fromkeys(competencias):  # union() no ADF: mês repetido roda uma vez
         try:
             resultados.append(pl_inf_diario_mes(origem, lake, competencia, carga,
                                                 depois_da_staging))

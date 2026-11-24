@@ -87,7 +87,8 @@ um mês é chamar o pai com aquele mês na lista (D6). Dois gatilhos seguem o co
 | execução manual | sob demanda | lista explícita (`competencias`) | carga inicial e reprocessamento forçado |
 
 O pai tem `concurrency: 1`: uma execução que chega com outra em andamento (o semanal e uma manual,
-por exemplo) fica na fila, e duas cargas nunca mexem no mesmo mês ao mesmo tempo.
+por exemplo) fica na fila, e duas cargas nunca mexem no mesmo mês ao mesmo tempo. Um mês repetido
+na lista roda uma vez só (`union`).
 
 ```mermaid
 flowchart TB
@@ -198,9 +199,11 @@ flowchart LR
     DEV["Desenvolvedor<br/>JSON do ADF + Terraform<br/>+ Function no GitHub"] -- "push / PR" --> GHA["GitHub Actions (CI)<br/>lint, tipos, testes,<br/>terraform validate/test,<br/>validador do ADF"]
     DEV -- "merge na main" --> AZP
     subgraph AZP["Azure Pipelines (agente próprio, pr: none)"]
-        B1["Build<br/>validate + export do ARM<br/>(@microsoft/azure-data-factory-utilities)<br/>pacote da Function"] --> D1["Deploy dev<br/>terraform apply → Function<br/>→ para gatilhos → ARM → religa"]
-        D1 --> A{"Aprovação<br/>(environment prod)"}
-        A --> P1["Deploy prod<br/>mesmos passos,<br/>parâmetros de prod"]
+        B1["CI<br/>testes, validate + export do ARM<br/>(@microsoft/azure-data-factory-utilities),<br/>arm-ttk, pacote da Function"] --> PD["Plano dev<br/>terraform plan"]
+        PD --> D1["Deploy dev<br/>apply do plano → Function<br/>→ para gatilhos → ARM → religa"]
+        D1 --> PP["Plano prod<br/>terraform plan"]
+        PP --> A{"Aprovação<br/>(environment prod)"}
+        A --> P1["Deploy prod<br/>mesmos passos e artefatos,<br/>parâmetros de prod"]
     end
 ```
 
@@ -210,13 +213,17 @@ flowchart LR
   recebem o ARM gerado no build.
 - **Publicação moderna:** o pacote npm da Microsoft valida a fábrica e exporta o ARM no CI, sem o
   botão "Publish" nem o branch `adf_publish` (D9).
+- **Quem aprova lê o plano:** o plano de cada ambiente roda num estágio próprio, antes do estágio
+  com a aprovação, e o deploy aplica esse plano, não um novo. Os checks de um environment são
+  avaliados antes de o estágio começar, então plano e aprovação no mesmo estágio deixariam o
+  plano esperando a aprovação.
 - **A Function sobe antes do ADF**, porque o linked service do ADF aponta para ela.
 - **Gatilhos param antes do deploy e voltam depois**, com o script em PowerShell que a Microsoft
   publica para isso, porque o ARM não atualiza um gatilho que está rodando.
 - **Autenticação do pipeline sem segredo:** service connection por federação de identidade
   (*workload identity federation*) (D10).
-- **Agente próprio** (auto-hospedado), que nunca roda código de terceiros: o pipeline de deploy
-  não dispara em PR, e o build de PR de fork fica desligado na organização (D10).
+- **Agente próprio** (auto-hospedado), que nunca roda código de PR não revisado: o pipeline de
+  deploy não dispara em PR, e o build de PR de fork fica desligado na organização (D10).
 
 ## 7. Segurança
 

@@ -1,0 +1,89 @@
+# CI público: valida cada push e cada pull request sem nenhuma credencial da Azure.
+#
+# Roda o que dá para provar sem conta: testes do Python, Terraform com provider simulado, o
+# validador e o export do ADF pelo pacote da Microsoft, o arm-ttk sobre o ARM, os YAMLs contra
+# o schema e os scripts no shellcheck. O deploy é do Azure Pipelines (azure-pipelines.yml), que
+# não roda em pull request.
+#
+# Actions fixadas pelo commit (a tag ao lado é só leitura): uma tag pode ser movida, o commit não.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: ruff, mypy e pytest
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - run: uv sync --frozen --all-extras
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: uv run pytest -q
+      - name: Pacote da Function
+        run: uv run python ci/funcao/empacotar.py
+
+  infra:
+    name: Terraform
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ github.token }} # tflint --init baixa o plugin do azurerm pela API
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.1 # >= 1.11.2 (infra/versions.tf); fixa para o CI não mudar sozinho
+          terraform_wrapper: false
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: v0.66.0
+      - run: infra/validar.sh
+
+  adf:
+    name: ADF e arm-ttk
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22 # LTS em manutenção: o pacote do ADF pede uma versão com suporte
+      - run: uv sync --frozen --all-extras
+      - run: ci/adf/validar.sh
+      - name: arm-ttk (pwsh já vem no runner Linux)
+        run: ci/adf/armttk.sh
+
+  yaml:
+    name: YAML e shell
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      # nonunicode: o schema do Azure Pipelines tem expressões regulares que o modo padrão recusa.
+      - run: >-
+          uvx check-jsonschema==0.39.0 --regex-variant nonunicode
+          --builtin-schema vendor.azure-pipelines azure-pipelines.yml ci/azure/deploy.yml
+      - run: uvx check-jsonschema==0.39.0 --builtin-schema vendor.github-workflows .github/workflows/ci.yml
+      - name: shellcheck (já vem no runner)
+        run: shellcheck ci/adf/*.sh ci/deploy/*.sh infra/validar.sh

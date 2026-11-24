@@ -39,7 +39,7 @@
                             "typeProperties": {
                                 "variableName": "meses",
                                 "value": {
-                                    "value": "@pipeline().parameters.competencias",
+                                    "value": "@union(pipeline().parameters.competencias, pipeline().parameters.competencias)",
                                     "type": "Expression"
                                 }
                             }

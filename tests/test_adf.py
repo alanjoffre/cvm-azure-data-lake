@@ -400,6 +400,9 @@ def test_execucao_manual_com_lista_carrega_exatamente_a_lista() -> None:
     agora = datetime(2026, 11, 24, 13, 0, tzinfo=UTC)
     assert _meses_do_pai({"competencias": ["202609", "202512"]}, agora) == ["202609", "202512"]
     assert _meses_do_pai({"competencias": [202609]}, agora) == ["202609"]
+    # Mês repetido na lista: duas execuções do filho no mesmo mês colidiriam na troca da prata.
+    assert _meses_do_pai({"competencias": ["202609", "202512", "202609"]}, agora) == [
+        "202609", "202512"]
 
 
 def test_janela_invertida_falha_em_vez_de_carregar_nada() -> None:

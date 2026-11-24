@@ -9,12 +9,14 @@ confirma fica listado à parte.
 | Parte | Como se testa | Prova de quê |
 |---|---|---|
 | Carga, janela de reprocessamento, republicação, contagem e hash | pytest com dados sintéticos no formato da CVM, e a prova completa com os arquivos reais baixados da CVM | a lógica da tese: substitui o mês sem duplicar e sem perder |
-| Bronze, staging, prata e ouro | pastas locais com o mesmo layout do ADLS. O código só troca a raiz (pasta local ou `abfss://`). Ouro em DuckDB | camadas, partições e agregados |
+| Bronze, staging, prata e ouro | pastas locais com o mesmo layout do ADLS. O código só troca a raiz (pasta local ou o endpoint dfs da conta). Ouro em DuckDB | camadas, partições e agregados |
+| Function na Azure | [`tests/test_funcao.py`](../tests/test_funcao.py) (21 testes): o adaptador do ADLS sobre um serviço falso com a interface do SDK (a gravação num nome temporário e o rename por cima, sem truncar o arquivo vigente), a prova de ponta a ponta por ele, o controle que o lake recusa virando `ok: false` sem perder o manifesto anterior, o contrato HTTP (200 com `ok: false`, 400 para corpo inválido), o `HEAD` que falha sem derrubar a carga e as rotas do runtime contra os `functionName` do JSON | a Function chama o mesmo código da prova local e responde o que a guarda do pipeline lê |
+| Pacote e scripts de deploy | [`tests/test_deploy.py`](../tests/test_deploy.py) (19 testes): o zip com o layout do Python, reprodutível e importável depois de extraído; os parâmetros do ARM a partir das saídas do Terraform; o pré e o pós-script com os argumentos que o script gerado declara (parar os dois gatilhos, os parâmetros do ambiente); `funcao.sh` e `terraform.sh` com `az` e `terraform` falsos (a chave nunca na linha de comando nem no log, a segunda execução não regrava) | o deploy pede à CLI o que a doc manda, sem vazar o segredo |
 | Terraform | [`infra/validar.sh`](../infra/validar.sh): `terraform fmt -check`, `terraform validate`, tflint (com as regras do azurerm), Checkov e `terraform test` com `mock_provider` (16 testes, sem conta; o da raiz roda com dev e com prod) | infraestrutura coerente e com as regras de segurança do desenho |
 | ADF (JSON) | [`ci/adf/validar.sh`](../ci/adf/validar.sh): `@microsoft/azure-data-factory-utilities` (validate + export do ARM) e [`tests/test_adf.py`](../tests/test_adf.py) (31 testes: referências, `dependsOn` que o validador não confere, caminhos iguais aos do código, contrato com a Function, meses dos gatilhos contra a janela, parâmetros do ARM) | o JSON é válido (esquema e referências), gera o ARM e faz o que o código local faz; não prova a execução ([`adf.md`](adf.md#validar)) |
-| ARM gerado | arm-ttk no CI (agente Linux com PowerShell), sobre o ARM que o `ci/adf/validar.sh` exporta | boas práticas do template |
-| Azure Pipelines (YAML) | validação contra o esquema publicado; os scripts das etapas rodam no CI do GitHub | a estrutura do arquivo; variáveis e templates só se resolvem no Azure DevOps |
-| Tudo | GitHub Actions a cada push | selo verde |
+| ARM gerado | [`ci/adf/armttk.sh`](../ci/adf/armttk.sh): arm-ttk fixado pelo commit da release, com PowerShell 7, sobre o ARM que o `ci/adf/validar.sh` exporta. Dois testes pulados, com o motivo no script: reprovam o que o gerador da Microsoft escreve (`$schema` com `http://` e propriedades vazias) | boas práticas do template |
+| Azure Pipelines (YAML) | `check-jsonschema` com o esquema publicado do Azure Pipelines, nos dois arquivos; os scripts das etapas rodam nos testes e no shellcheck | a estrutura do arquivo e os nomes das tasks e das entradas; variáveis, templates e checks só se resolvem no Azure DevOps |
+| Tudo | [GitHub Actions](../.github/workflows/ci.yml) a cada push e pull request, sem credencial: Python, Terraform, ADF com arm-ttk, YAML e shellcheck | selo verde |
 
 ## O que a prova da tese cobra
 
@@ -22,7 +24,9 @@ Para cada mês carregado (na staging, antes da troca, e na prata, depois):
 1. a contagem de linhas da bronze (CSV) é igual à do Parquet;
 2. o SHA-256 canônico (D7) da bronze é igual ao do Parquet;
 3. a chave `(CNPJ_FUNDO_CLASSE, ID_SUBCLASSE, DT_COMPTC)` é única;
-4. o ouro soma as mesmas linhas da prata.
+4. toda `DT_COMPTC` cai no mês da partição (a chave só é única dentro dela; conferido também
+   nos três meses reais baixados em 24/11/2026: nenhuma linha fora do mês);
+5. o ouro soma as mesmas linhas da prata.
 
 Na republicação simulada (T0 → T1 do mesmo mês):
 1. a prata do mês é igual a T1;
@@ -97,7 +101,8 @@ O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.
   ForEach com Execute Pipeline, `concurrency: 1` e os gatilhos (inclusive o nome do fuso de
   Brasília no gatilho). As expressões são avaliadas nos testes por um avaliador próprio
   ([`adf_expressao.py`](../tests/adf_expressao.py)), não pelo motor do ADF; ele avalia os dois
-  ramos do `if`, como o ADF, mas a equivalência só se confirma executando.
+  ramos do `if`, como o ADF, mas a equivalência só se confirma executando. Inclui o `union` da
+  lista de meses com ela mesma tirando a repetição dentro da própria lista.
 - Os tipos físicos que o Copy grava no Parquet: precisão e escala do `Decimal`, que a
   documentação não descreve, e o `Int64`. Se não forem os do dicionário, a reconciliação acusa
   pelo hash e vale o plano B (D2b).
@@ -118,10 +123,20 @@ O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.
 - A condição do RBAC Administrator aceita pela Azure e recusando, de fato, um papel fora da lista
   e uma atribuição a usuário.
 - O orçamento criado com a data de início do mês e o aviso chegando por e-mail.
-- A extensão `azure` do DuckDB, dentro da Function, lendo `abfss://` com a identidade gerenciada,
-  e o SDK do ADLS gravando o ouro e o controle.
-- O Azure Pipelines com agente próprio, federação de identidade, aprovação e deploy de dev para
-  prod; o build de PR de fork desligado.
+- A identidade do pipeline, só com papéis nos resource groups, lendo a assinatura
+  (`data.azurerm_subscription`) e passando na verificação da service connection.
+- O SDK do ADLS, dentro da Function, lendo a staging e a prata e gravando o ouro e o controle
+  com a identidade gerenciada (o rename por cima do arquivo vigente); o pacote subindo pelo
+  build remoto do Flex Consumption.
+- O campo `functionKeys` da saída de `az functionapp keys list`, que o `funcao.sh` lê (a doc da
+  CLI não descreve o formato) e o papel do pipeline no cofre valendo a tempo (o script tenta de
+  novo por alguns minutos).
+- O Azure Pipelines com agente próprio, federação de identidade (o provider e o backend renovando
+  o token pela service connection, com o ID dela em `AZURESUBSCRIPTION_SERVICE_CONNECTION_ID`,
+  que a página da task não documenta), aprovação no environment antes do apply e deploy de dev
+  para prod; o build de PR de fork desligado; o pré-script parando os dois gatilhos.
+- O arm-ttk no primeiro CI: se outro teste reprovar o que o gerador escreve, ele entra na lista
+  de pulados com o motivo, nunca sem ele.
 - O alerta de falha chegando por e-mail.
 - O custo: contagem de execuções de atividade cobradas, preço do Flex Consumption e do Key Vault.
 

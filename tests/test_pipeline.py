@@ -138,3 +138,19 @@ def test_cli_prova_grava_o_relatorio(snapshot: Path, tmp_path: Path) -> None:
     assert relatorio["ok"] is True and relatorio["competencias"] == COMPETENCIAS
     texto = (tmp_path / "r" / "prova.md").read_text()
     assert "Nada foi aplicado na Azure" in texto and "FALHOU" not in texto
+
+
+def test_linha_de_outro_mes_no_arquivo_derruba_o_mes(
+        gravar_snapshot: Callable[[dict[str, bytes]], Path], tmp_path: Path) -> None:
+    # A chave só é única dentro da partição: uma linha de setembro no arquivo de outubro
+    # duplicaria setembro no lake inteiro. A validação confere a premissa.
+    linhas = [list(linha) for linha in linhas_csv("202610")]
+    linhas[0][POS["DT_COMPTC"]] = "2026-09-30"
+    pasta = gravar_snapshot({"202609": zip_sintetico("202609"),
+                             "202610": montar_zip(montar_csv(linhas), "202610"),
+                             "202611": zip_sintetico("202611")})
+    lake = Lake(str(tmp_path / "lake"))
+    with pytest.raises(ExceptionGroup) as grupo:
+        adf_local.pl_inf_diario(OrigemPasta(pasta), lake, COMPETENCIAS, "carga-x")
+    assert "1 linhas com DT_COMPTC fora de 202610" in str(grupo.value.exceptions[0])
+    assert not Path(lake.manifesto("202610")).exists()

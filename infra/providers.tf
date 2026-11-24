@@ -1,6 +1,10 @@
 # A assinatura e o tenant chegam pelo ambiente (ARM_SUBSCRIPTION_ID, ARM_TENANT_ID e, no
 # pipeline, ARM_USE_OIDC com a federação de identidade). Nenhum ID no repositório.
 provider "azurerm" {
+  # Registrar provedores de recurso exige permissão na assinatura, que o pipeline não tem (ele só
+  # tem papel nos resource groups). O registro é feito uma vez no bootstrap (runbook, passo 1).
+  resource_provider_registrations = "none"
+
   # As contas têm a chave compartilhada desligada: o provider fala com o armazenamento pelo
   # Entra ID.
   storage_use_azuread = true

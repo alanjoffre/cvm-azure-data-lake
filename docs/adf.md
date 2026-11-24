@@ -26,7 +26,8 @@ atividade tem no próprio JSON uma `description` com o motivo dela.
 | `competencias` | array | vazio | lista explícita de AAAAMM (carga inicial, reprocessamento); quando preenchida, `de` e `ate` são ignorados |
 
 1. `escolher_meses` (IfCondition): sem lista, a variável `meses` recebe
-   `range(de, ate - de + 1)`, os deslocamentos de M. Com lista, recebe a própria lista. A escolha
+   `range(de, ate - de + 1)`, os deslocamentos de M. Com lista, recebe a lista sem repetição
+   (`union` da lista com ela mesma): dois filhos no mesmo mês colidiriam na troca da prata. A escolha
    passa por uma variável porque o `if` da linguagem de expressões não devolve array: o
    validador recusa `if(Bool, Array, Array)` e também `string()` de array.
 2. `para_cada_competencia` (ForEach, lotes de 4 em paralelo) chama o filho com:
@@ -44,7 +45,8 @@ falha não interrompe os outros, e o pai termina como falho.
 
 ## Pipeline filho: `pl_inf_diario_mes`
 
-Parâmetros `competencia` (AAAAMM) e `carga`. Pode ser executado sozinho para um mês. Os caminhos
+Parâmetros `competencia` (AAAAMM) e `carga`. Reprocessar um mês é pelo pai, com `competencias`:
+o filho disparado sozinho não passa pela fila do pai (`concurrency: 1`). Os caminhos
 são os de [`lake.py`](../src/cvm_lake/lake.py) (seção 4 da [arquitetura](arquitetura.md)). Os
 testes calculam os caminhos a partir das expressões do JSON e comparam com esse arquivo.
 
@@ -107,10 +109,20 @@ falhas na mensagem. Se a própria Function cair (exceção, tempo esgotado, stat
 atividade falha, ou a resposta não traz `ok: true` e a guarda falha. Nos dois casos, a carga
 para.
 
-A entrada HTTP da Function, que ainda não está no repositório, fará um `HEAD` na URL do mês e
-entregará `ETag` e `Last-Modified` ao `reconciliar` (parâmetro `origem`), que os grava no
-manifesto. O ADF não lê cabeçalho HTTP sem código: o Copy não expõe os cabeçalhos da resposta,
-e a atividade Web não faz `HEAD` (D3).
+A entrada HTTP ([`function_app.py`](../funcao_azure/function_app.py), que só liga a requisição
+a [`entrada.py`](../src/cvm_lake/funcao/entrada.py)) expõe `POST /api/validar` e
+`POST /api/reconciliar`, com chave de função. As rotas são os `functionName` das duas atividades,
+e um teste confere isso contra o JSON. A resposta é `200` com a resposta da prova, inclusive com
+`ok: false`, e `400` para corpo inválido, que é defeito do pipeline, não do dado.
+
+Antes do `reconciliar`, a entrada faz um `HEAD` na URL do mês e entrega `ETag`, `Last-Modified`
+e o tamanho servido (parâmetro `origem`), que vão para o manifesto com o tamanho do ZIP da bronze
+e `confere_com_bronze` (D3). O ADF não lê cabeçalho HTTP sem código: o Copy não expõe os
+cabeçalhos da resposta, e a atividade Web não faz `HEAD`.
+
+A chave que o linked service usa é a chave de host `adf`, criada no deploy e gravada no cofre
+como `funcao-chave-adf` ([`ci/deploy/funcao.sh`](../ci/deploy/funcao.sh)), sem passar pelo estado
+do Terraform.
 
 ## Gatilhos
 
@@ -146,7 +158,7 @@ dentro da fábrica, não a fábrica: ela e a identidade são do Terraform (D9).
 
 ## Validar
 
-Precisa de Node 20 ou 22 e [uv](https://docs.astral.sh/uv/).
+Precisa de Node 22 (LTS) e [uv](https://docs.astral.sh/uv/).
 
 ```bash
 ci/adf/validar.sh      # validate, export do ARM para saida/arm e os testes do JSON e do ARM
@@ -155,8 +167,8 @@ ci/adf/validar.sh      # validate, export do ARM para saida/arm e os testes do J
 - **`validate` e `export`** pelo [`@microsoft/azure-data-factory-utilities`](https://www.npmjs.com/package/@microsoft/azure-data-factory-utilities),
   versão fixa em `ci/adf/package-lock.json`. O pacote baixa a cada execução o validador que o
   ADF Studio usa, que não tem versão. O script registra o SHA-256 dele, e uma regra nova da
-  Microsoft pode reprovar um JSON que antes passava. O ID da fábrica é só texto: nada conecta à
-  Azure.
+  Microsoft pode reprovar um JSON que antes passava. O ID da fábrica é só texto: o pacote não
+  fala com a Azure, mas precisa de internet para baixar o validador.
 - **O que o validador pega:** dataset, linked service ou parâmetro inexistente e erro de tipo
   em expressão (conferido quebrando cada um). **O que ele não pega:** um `dependsOn` que aponta
   para uma atividade que não existe.

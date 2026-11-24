@@ -100,8 +100,8 @@ resource "azurerm_function_app_flex_consumption" "funcao" {
     # duas chaves acima. Conferir na execução (testes.md, "Só na Azure").
     "AzureWebJobsStorage" = ""
 
-    # O que o código da Function lê: a conta do lake (o DuckDB e o SDK montam abfss:// e o
-    # endpoint dfs a partir dela) e o ambiente.
+    # O que o código da Function lê: a conta do lake (o SDK monta o endpoint dfs a partir dela)
+    # e o ambiente.
     "LAKE_CONTA"    = azurerm_storage_account.lake.name
     "LAKE_AMBIENTE" = var.ambiente
   }

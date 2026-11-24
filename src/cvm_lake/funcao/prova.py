@@ -10,7 +10,7 @@ reconciliação compara bronze × prata depois da troca, refaz o ouro do mês, c
 a prata e só então grava o manifesto (a carga vigente do mês).
 
 Toda falha vira ``ok: false`` com a lista de motivos, nunca exceção para fora: a Function devolve
-o JSON com status de erro, e o ADF falha a atividade.
+o JSON (``entrada.py``), e a guarda Fail do pipeline derruba a carga com as falhas na mensagem.
 """
 
 from __future__ import annotations
@@ -140,6 +140,14 @@ def _comparar(bronze: ResumoBronze | None, destino: Resumo | None, nome: str) ->
     return falhas
 
 
+def _fora_da_competencia(con: duckdb.DuckDBPyConnection, bronze: ResumoBronze | None,
+                         competencia: str) -> list[str]:
+    if bronze is None or not bronze.sha256:
+        return []  # bronze não tipada: a falha já foi registrada
+    fora = int(_um(con, esquema.sql_fora_da_competencia("bronze", competencia))[0])
+    return [f"bronze: {fora} linhas com DT_COMPTC fora de {competencia}"] if fora else []
+
+
 def _agora() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
@@ -156,6 +164,21 @@ def _gravar_json(arm: Armazenamento, caminho: str, dado: dict[str, Any]) -> None
     arm.gravar_bytes(caminho, texto.encode("utf-8"))
 
 
+def _registrar(arm: Armazenamento, caminho: str, dado: dict[str, Any],
+               resposta: Resposta) -> None:
+    """Grava o controle; se o lake recusar, a resposta vira ``ok: false`` com o motivo.
+
+    Assim a Function sempre devolve o JSON que a guarda do pipeline lê: carga que não ficou
+    registrada não segue.
+    """
+    try:
+        _gravar_json(arm, caminho, dado)
+    except OSError as erro:
+        resposta["ok"] = False
+        resposta["falhas"].append(f"controle não gravado ({caminho}): "
+                                  f"{type(erro).__name__}: {erro}")
+
+
 def validar(arm: Armazenamento, lake: Lake, competencia: str, carga: str) -> Resposta:
     """Passo 3: bronze × staging. ``ok`` libera o ADF para apagar e regravar a prata."""
     inicio = time.perf_counter()
@@ -168,7 +191,8 @@ def validar(arm: Armazenamento, lake: Lake, competencia: str, carga: str) -> Res
         bronze = resumir_csv(con, csv_do_zip(arm.ler_bytes(lake.bronze_zip(competencia, carga))))
         staging = resumir_parquet(
             con, arm.caminho_duckdb(parquets(lake.staging(competencia, carga))), "staging")
-    except (duckdb.Error, ErroDeLayout, OSError, zipfile.BadZipFile) as erro:
+        falhas += _fora_da_competencia(con, bronze, competencia)
+    except (duckdb.Error, ErroDeLayout, OSError, ValueError, zipfile.BadZipFile) as erro:
         falhas.append(f"{type(erro).__name__}: {erro}")
     falhas += _comparar(bronze, staging, "staging")
 
@@ -183,7 +207,7 @@ def validar(arm: Armazenamento, lake: Lake, competencia: str, carga: str) -> Res
         "segundos": round(time.perf_counter() - inicio, 3),
         "em": _agora(),
     }
-    _gravar_json(arm, lake.relatorio_carga(competencia, carga), {"validacao": resposta})
+    _registrar(arm, lake.relatorio_carga(competencia, carga), {"validacao": resposta}, resposta)
     return resposta
 
 
@@ -205,6 +229,7 @@ def reconciliar(arm: Armazenamento, lake: Lake, competencia: str, carga: str,
         bronze = resumir_csv(con, csv_do_zip(arm.ler_bytes(lake.bronze_zip(competencia, carga))))
         prata = resumir_parquet(
             con, arm.caminho_duckdb(parquets(lake.prata(competencia))), "prata")
+        falhas += _fora_da_competencia(con, bronze, competencia)
         falhas += _comparar(bronze, prata, "prata")
         if not falhas:
             con.execute(f"CREATE OR REPLACE TEMP TABLE ouro AS {sql_ouro.SQL_OURO}")
@@ -221,7 +246,7 @@ def reconciliar(arm: Armazenamento, lake: Lake, competencia: str, carga: str,
                 arquivo = Path(pasta) / "ouro.parquet"
                 con.execute(f"COPY ouro TO {_literal(str(arquivo))} (FORMAT parquet)")
                 arm.gravar_bytes(f"{lake.ouro(competencia)}/ouro.parquet", arquivo.read_bytes())
-    except (duckdb.Error, ErroDeLayout, OSError, zipfile.BadZipFile) as erro:
+    except (duckdb.Error, ErroDeLayout, OSError, ValueError, zipfile.BadZipFile) as erro:
         falhas.append(f"{type(erro).__name__}: {erro}")
 
     resposta: Resposta = {
@@ -237,17 +262,24 @@ def reconciliar(arm: Armazenamento, lake: Lake, competencia: str, carga: str,
         "em": _agora(),
     }
     caminho_relatorio = lake.relatorio_carga(competencia, carga)
-    relatorio = _ler_json(arm, caminho_relatorio)
+    try:
+        relatorio = _ler_json(arm, caminho_relatorio)
+    except (OSError, ValueError) as erro:  # ValueError: JSON corrompido
+        relatorio = {"validacao_ilegivel": f"{type(erro).__name__}: {erro}"}
     relatorio["reconciliacao"] = resposta
-    _gravar_json(arm, caminho_relatorio, relatorio)
+    _registrar(arm, caminho_relatorio, relatorio, resposta)
 
     if resposta["ok"] and prata is not None:
-        _gravar_json(arm, lake.manifesto(competencia), {
+        # O manifesto é a fonte de verdade do que está conferido: só muda com tudo gravado.
+        _registrar(arm, lake.manifesto(competencia), {
             "competencia": competencia,
             "carga_vigente": carga,
             "linhas": prata.linhas,
             "sha256": prata.sha256,
             "origem": origem or {},
             "reconciliado_em": resposta["em"],
-        })
+        }, resposta)
+        if not resposta["ok"]:  # o relatório já dizia ok: regrava com o motivo
+            relatorio["reconciliacao"] = resposta
+            _registrar(arm, caminho_relatorio, relatorio, resposta)
     return resposta

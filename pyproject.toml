@@ -12,6 +12,13 @@ dev = ["pytest>=8.3", "ruff>=0.8", "mypy>=1.13"]
 [project.scripts]
 cvm-lake = "cvm_lake.cli:main"
 
+[project.optional-dependencies]
+azure = [
+    "azure-functions>=1.26.0",
+    "azure-identity>=1.27.0",
+    "azure-storage-file-datalake>=12.26.1",
+]
+
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
@@ -29,7 +36,8 @@ select = ["E", "F", "I", "B", "UP", "SIM", "PTH"]
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["src", "tests"]
+files = ["src", "tests", "funcao_azure", "ci/funcao", "ci/deploy"]
+mypy_path = "funcao_azure"
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]
@@ -37,4 +45,5 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["funcao_azure"]
 addopts = "-ra"

@@ -48,7 +48,7 @@ Detalhes, layout do lake, segurança, ambientes e custo estimado: [`docs/arquite
 | Carga local e prova com o dado da CVM | pronto: 32 de 32 checagens com os arquivos reais de set, out e nov/2026 ([relatório](reports/prova.md)) |
 | Terraform | pronto: dev e prod pelo mesmo módulo, bootstrap do estado e das permissões; `fmt`, `validate`, tflint, Checkov e 16 testes com provider simulado ([`infra/`](infra/README.md)) |
 | ADF (JSON) | pronto: pipeline pai e filho, gatilhos diário e semanal; validate e export do ARM pelo pacote da Microsoft e 31 testes do JSON e do ARM ([`docs/adf.md`](docs/adf.md)) |
-| CI/CD e runbook | em construção |
+| CI/CD e runbook | pronto: Azure Pipelines com plano, aprovação e deploy de dev para prod (Terraform, Function, ADF); GitHub Actions sem credencial; YAML conferido no esquema; o passo a passo em [`docs/runbook.md`](docs/runbook.md) |
 
 ## A fonte reescrevendo o passado
 
@@ -62,8 +62,8 @@ recarregasse setembro ficaria com 95 linhas a menos, sem nenhum erro. Detalhes d
 Precisa de Python 3.12 e [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv sync
-uv run pytest                                   # 66 testes, dado sintético no formato da CVM
+uv sync --all-extras
+uv run pytest                                   # 107 testes, dado sintético no formato da CVM
 uv run cvm-lake baixar --competencias 202609 202610 202611
 uv run cvm-lake prova --limpar                  # grava reports/prova.md e reports/prova.json
 ```
@@ -78,13 +78,20 @@ O Terraform se valida sem conta na Azure (precisa de Terraform, tflint e uv):
 infra/validar.sh      # fmt, validate, tflint, Checkov e terraform test com provider simulado
 ```
 
-O JSON do ADF também (precisa de Node 20 ou 22):
+O JSON do ADF também (precisa de Node 22):
 
 ```bash
 ci/adf/validar.sh     # validate e export do ARM pelo pacote da Microsoft, e os testes do ARM
 ```
 
-Sem o ARM gerado, os 2 testes do ARM ficam de fora do `uv run pytest`.
+Sem o ARM gerado, os 4 testes do ARM ficam de fora do `uv run pytest`.
+
+O pacote da Function e o arm-ttk (precisa de PowerShell 7):
+
+```bash
+uv run python ci/funcao/empacotar.py   # saida/funcao.zip, reprodutível, com o sha256
+ci/adf/armttk.sh                       # arm-ttk sobre o ARM exportado
+```
 
 ## Limites declarados
 

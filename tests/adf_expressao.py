@@ -255,6 +255,18 @@ def _json(_: Contexto, texto: Any) -> Any:
     return json.loads(_texto(texto))
 
 
+def _uniao(_: Contexto, *listas: Any) -> list[Any]:
+    """union() de arrays: os itens de todas, sem repetição, na ordem em que aparecem."""
+    if not listas or not all(isinstance(lista, list) for lista in listas):
+        raise ErroDeExpressao(f"union() só coberto para arrays: {listas!r}")
+    vistos: list[Any] = []
+    for lista in listas:
+        for item in lista:
+            if item not in vistos:
+                vistos.append(item)
+    return vistos
+
+
 def _concat(_: Contexto, *partes: Any) -> str:
     return "".join(_texto(p) for p in partes)
 
@@ -265,6 +277,7 @@ FUNCOES: dict[str, Callable[..., Any]] = {
     "empty": _vazio,
     "equals": lambda _, a, b: a == b,
     "range": _range,
+    "union": _uniao,
     "add": lambda _, a, b: _inteiro(a) + _inteiro(b),
     "sub": lambda _, a, b: _inteiro(a) - _inteiro(b),
     "string": _string,

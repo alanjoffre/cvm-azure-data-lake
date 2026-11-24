@@ -1,8 +1,9 @@
 """Layout do lake (docs/arquitetura.md, seção 4).
 
-O mesmo layout vale para a pasta local e para o ADLS Gen2: só a raiz muda (``saida/lake`` ou
-``abfss://<container>@<conta>.dfs.core.windows.net``). Na Azure cada camada é um container; aqui,
-uma subpasta. Os caminhos são montados como texto, sem ``pathlib``, para servir aos dois.
+O mesmo layout vale para a pasta local e para o ADLS Gen2: só a raiz muda (``saida/lake`` ou o
+endpoint dfs da conta, ``https://<conta>.dfs.core.windows.net``). Na Azure cada camada é um
+container, o primeiro segmento depois da raiz (``funcao/adls.py``); aqui, uma subpasta. Os
+caminhos são montados como texto, sem ``pathlib``, para servir aos dois.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-_COMPETENCIA = re.compile(r"\d{4}(0[1-9]|1[0-2])")
+_COMPETENCIA = re.compile(r"[0-9]{4}(0[1-9]|1[0-2])")  # [0-9]: \d aceitaria dígito Unicode
 _CARGA = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 
