@@ -1,0 +1,40 @@
+[project]
+name = "adf-adls-medallion-ci"
+version = "0.1.0"
+description = "Recarga da janela mutável do Informe Diário da CVM, com contagem e SHA-256 canônico por mês"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = ["duckdb>=1.4"]
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.8", "mypy>=1.13"]
+
+[project.scripts]
+cvm-lake = "cvm_lake.cli:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "PTH"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
