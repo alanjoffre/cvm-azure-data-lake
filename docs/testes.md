@@ -14,7 +14,7 @@ confirma fica listado à parte.
 | Pacote e scripts de deploy | [`tests/test_deploy.py`](../tests/test_deploy.py) (19 testes): o zip com o layout do Python, reprodutível e importável depois de extraído; os parâmetros do ARM a partir das saídas do Terraform; o pré e o pós-script com os argumentos que o script gerado declara (parar os dois gatilhos, os parâmetros do ambiente); `funcao.sh` e `terraform.sh` com `az` e `terraform` falsos (a chave nunca na linha de comando nem no log, a segunda execução não regrava) | o deploy pede à CLI o que a doc manda, sem vazar o segredo |
 | Terraform | [`infra/validar.sh`](../infra/validar.sh): `terraform fmt -check`, `terraform validate`, tflint (com as regras do azurerm), Checkov e `terraform test` com `mock_provider` (16 testes, sem conta; o da raiz roda com dev e com prod) | infraestrutura coerente e com as regras de segurança do desenho |
 | ADF (JSON) | [`ci/adf/validar.sh`](../ci/adf/validar.sh): `@microsoft/azure-data-factory-utilities` (validate + export do ARM) e [`tests/test_adf.py`](../tests/test_adf.py) (31 testes: referências, `dependsOn` que o validador não confere, caminhos iguais aos do código, contrato com a Function, meses dos gatilhos contra a janela, parâmetros do ARM) | o JSON é válido (esquema e referências), gera o ARM e faz o que o código local faz; não prova a execução ([`adf.md`](adf.md#validar)) |
-| ARM gerado | [`ci/adf/armttk.sh`](../ci/adf/armttk.sh): arm-ttk fixado pelo commit da release, com PowerShell 7, sobre o ARM que o `ci/adf/validar.sh` exporta. Dois testes pulados, com o motivo no script: reprovam o que o gerador da Microsoft escreve (`$schema` com `http://` e propriedades vazias) | boas práticas do template |
+| ARM gerado | [`ci/adf/armttk.sh`](../ci/adf/armttk.sh): arm-ttk fixado pelo commit da release, com PowerShell 7, sobre o ARM que o `ci/adf/validar.sh` exporta. Quatro testes pulados, com o motivo no script: reprovam o que o gerador da Microsoft escreve (`$schema` com `http://`, que dispara também a regra de endereço fixo; propriedades vazias; todo `dependsOn` como `concat(variables('factoryId'), …)`). O que as regras de endereço e de `dependsOn` cobririam, o teste do ARM em `tests/test_adf.py` confere | boas práticas do template | boas práticas do template |
 | Azure Pipelines (YAML) | `check-jsonschema` com o esquema publicado do Azure Pipelines, nos dois arquivos; os scripts das etapas rodam nos testes e no shellcheck | a estrutura do arquivo e os nomes das tasks e das entradas; variáveis, templates e checks só se resolvem no Azure DevOps |
 | Tudo | [GitHub Actions](../.github/workflows/ci.yml) a cada push e pull request, sem credencial: Python, Terraform, ADF com arm-ttk, YAML e shellcheck | o selo público do CI (o deploy fica no Azure Pipelines) |
 
@@ -135,8 +135,6 @@ O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.
   o token pela service connection, com o ID dela em `AZURESUBSCRIPTION_SERVICE_CONNECTION_ID`,
   que a página da task não documenta), aprovação no environment antes do apply e deploy de dev
   para prod; o build de PR de fork desligado; o pré-script parando os dois gatilhos.
-- O arm-ttk no primeiro CI: se outro teste reprovar o que o gerador escreve, ele entra na lista
-  de pulados com o motivo, nunca sem ele.
 - O alerta de falha chegando por e-mail.
 - O custo: contagem de execuções de atividade cobradas, preço do Flex Consumption e do Key Vault.
 

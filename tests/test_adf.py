@@ -474,11 +474,32 @@ def test_arm_tem_um_parametro_para_cada_endereco_do_ambiente() -> None:
     assert not [p for p, d in template["parameters"].items() if d["type"] == "secureString"]
 
 
+# Hosts da regra de endereço fixo do arm-ttk (DeploymentTemplate-Must-Not-Contain-Hardcoded-Uri),
+# que o ci/adf/armttk.sh pula por causa do $schema que o export grava com http://.
+HOSTS_FIXOS = ("management.core.windows.net", "gallery.azure.com", "management.azure.com",
+               "database.windows.net", "core.windows.net", "login.microsoftonline.com",
+               "graph.windows.net", "vault.azure.net", "datalake.azure.net",
+               "azuredatalakestore.net", "azuredatalakeanalytics.net", "api.loganalytics.io",
+               "asazure.windows.net", "batch.core.windows.net")
+DEPENDE_DE = re.compile(r"^\[concat\(variables\('factoryId'\), '/(?P<tipo>\w+)/(?P<nome>\w+)'\)\]$")
+
+
 @sem_arm
-def test_arm_nao_recria_a_fabrica_que_e_do_terraform() -> None:
+def test_arm_so_traz_o_conteudo_da_fabrica() -> None:
     assert ARM is not None
     template = json.loads((ARM / "ARMTemplateForFactory.json").read_text())
     tipos = {r["type"] for r in template["resources"]}
     assert "Microsoft.DataFactory/factories" not in tipos  # D9: a fábrica e a identidade
     assert {"Microsoft.DataFactory/factories/pipelines",
             "Microsoft.DataFactory/factories/triggers"} <= tipos
+    # Os endereços do ambiente chegam por parâmetro; nenhum fica fixo nos recursos.
+    recursos = json.dumps(template["resources"]).lower()
+    assert not [h for h in HOSTS_FIXOS if h in recursos]
+    # Todo dependsOn aponta para um recurso deste template (as duas regras que o arm-ttk pula).
+    nomes = {(r["type"].rsplit("/", 1)[1], r["name"].split("'/")[-1].rstrip("')]"))
+             for r in template["resources"]}
+    for recurso in template["resources"]:
+        for dep in recurso.get("dependsOn", []):
+            achado = DEPENDE_DE.match(dep)
+            assert achado, dep
+            assert (achado["tipo"], achado["nome"]) in nomes, dep
