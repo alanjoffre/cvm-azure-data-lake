@@ -47,7 +47,7 @@ Detalhes, layout do lake, segurança, ambientes e custo estimado: [`docs/arquite
 | Desenho e decisões | pronto |
 | Carga local e prova com o dado da CVM | pronto: 32 de 32 checagens com os arquivos reais de set, out e nov/2026 ([relatório](reports/prova.md)) |
 | Terraform | pronto: dev e prod pelo mesmo módulo, bootstrap do estado e das permissões; `fmt`, `validate`, tflint, Checkov e 16 testes com provider simulado ([`infra/`](infra/README.md)) |
-| ADF (JSON) | em construção |
+| ADF (JSON) | pronto: pipeline pai e filho, gatilhos diário e semanal; validate e export do ARM pelo pacote da Microsoft e 31 testes do JSON e do ARM ([`docs/adf.md`](docs/adf.md)) |
 | CI/CD e runbook | em construção |
 
 ## A fonte reescrevendo o passado
@@ -63,7 +63,7 @@ Precisa de Python 3.12 e [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
-uv run pytest                                   # 35 testes, dado sintético no formato da CVM
+uv run pytest                                   # 66 testes, dado sintético no formato da CVM
 uv run cvm-lake baixar --competencias 202609 202610 202611
 uv run cvm-lake prova --limpar                  # grava reports/prova.md e reports/prova.json
 ```
@@ -77,6 +77,14 @@ O Terraform se valida sem conta na Azure (precisa de Terraform, tflint e uv):
 ```bash
 infra/validar.sh      # fmt, validate, tflint, Checkov e terraform test com provider simulado
 ```
+
+O JSON do ADF também (precisa de Node 20 ou 22):
+
+```bash
+ci/adf/validar.sh     # validate e export do ARM pelo pacote da Microsoft, e os testes do ARM
+```
+
+Sem o ARM gerado, os 2 testes do ARM ficam de fora do `uv run pytest`.
 
 ## Limites declarados
 

@@ -3,12 +3,15 @@
 O ADF não tem emulador (D13). Para exercitar a lógica da Function na máquina, este módulo faz o
 papel das atividades do ADF que movem dado (Copy, Delete) e dos dois pipelines
 (``pl_inf_diario`` → ``pl_inf_diario_mes``). Ele NÃO é o que roda na Azure: lá, quem copia é a
-atividade Copy, e o JSON dos pipelines está em ``adf/`` (F4).
+atividade Copy, e o JSON dos pipelines está em ``adf/`` (docs/adf.md).
 
 Diferenças conhecidas, declaradas em docs/testes.md:
 - o Copy ZIP → Parquet é feito aqui pelo leitor de CSV do DuckDB com os tipos do dicionário; o
   tipo físico que o Copy do ADF grava só se confirma na Azure (D2b). Os testes cobrem as
-  variantes "tudo como texto" e "decimal como double";
+  variantes "tudo como texto", "decimal como double" e a dos tipos do mapeamento em adf/
+  (tests/test_adf.py);
+- o JSON confere com Get Metadata se a prata existe antes de apagá-la; aqui o Delete já ignora
+  a pasta que não existe, o que dá o mesmo resultado;
 - o ForEach roda os meses em sequência (no ADF, lotes de 4 em paralelo; cada mês escreve só nos
   próprios caminhos, então a ordem não muda o resultado).
 """
@@ -37,7 +40,7 @@ Gancho = Callable[[Lake, str, str], None]
 
 
 class CargaFalhou(Exception):
-    """A Function respondeu ``ok: false``: no ADF, a atividade falha e o pipeline para."""
+    """A Function respondeu ``ok: false``: no ADF, a atividade Fail derruba o pipeline."""
 
     def __init__(self, resposta: Resposta) -> None:
         super().__init__(f"{resposta['etapa']} {resposta['competencia']}: {resposta['falhas']}")
@@ -70,8 +73,8 @@ def copy_zip_para_staging(lake: Lake, competencia: str, carga: str) -> None:
     leitor não passa escondido pelo outro.
     """
     conteudo = Path(lake.bronze_zip(competencia, carga)).read_bytes()
-    pasta = Path(lake.staging(competencia, carga))
-    pasta.mkdir(parents=True, exist_ok=True)
+    destino = Path(lake.staging_parquet(competencia, carga))
+    destino.parent.mkdir(parents=True, exist_ok=True)
     tipos = ", ".join(f"'{c.nome}': '{c.tipo}'" for c in esquema.COLUNAS)
     with tempfile.TemporaryDirectory() as tmp:
         csv = Path(tmp) / "entrada.csv"
@@ -80,7 +83,7 @@ def copy_zip_para_staging(lake: Lake, competencia: str, carga: str) -> None:
         con.execute(f"""
             COPY (SELECT * FROM read_csv('{csv}', header = true, delim = ';',
                                          columns = {{{tipos}}}))
-            TO '{pasta / "part-00000.parquet"}' (FORMAT parquet)
+            TO '{destino}' (FORMAT parquet)
         """)
 
 

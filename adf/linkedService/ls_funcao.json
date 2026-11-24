@@ -1,0 +1,19 @@
+{
+    "name": "ls_funcao",
+    "properties": {
+        "description": "A Function do ambiente (validar e reconciliar). A chave vem do Key Vault; a etapa de deploy a grava lá (D11).",
+        "annotations": [],
+        "type": "AzureFunction",
+        "typeProperties": {
+            "functionAppUrl": "https://funcao.definido-no-deploy.invalid",
+            "functionKey": {
+                "type": "AzureKeyVaultSecret",
+                "store": {
+                    "referenceName": "ls_kv",
+                    "type": "LinkedServiceReference"
+                },
+                "secretName": "funcao-chave-adf"
+            }
+        }
+    }
+}

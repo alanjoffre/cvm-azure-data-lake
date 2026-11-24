@@ -1,0 +1,11 @@
+{
+    "name": "ls_adls_lake",
+    "properties": {
+        "description": "Conta do lake do ambiente (ADLS Gen2). Sem credencial: o ADF entra com a identidade gerenciada do sistema (Storage Blob Data Contributor, infra/modules/ambiente/rbac.tf). A URL vem do parâmetro do ARM de cada ambiente.",
+        "annotations": [],
+        "type": "AzureBlobFS",
+        "typeProperties": {
+            "url": "https://lake.definido-no-deploy.invalid/"
+        }
+    }
+}

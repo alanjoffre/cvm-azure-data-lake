@@ -1,0 +1,605 @@
+{
+    "name": "pl_inf_diario_mes",
+    "properties": {
+        "description": "Um mês de competência, os 7 passos de docs/adf.md. Pode ser executado sozinho para reprocessar um mês.",
+        "activities": [
+            {
+                "name": "copiar_origem_para_bronze",
+                "type": "Copy",
+                "dependsOn": [],
+                "userProperties": [],
+                "description": "Passo 1. HTTP → bronze, binário. O caminho tem a carga (RunId do pai): nada é sobrescrito entre cargas (D5). Retentativa segura: a mesma carga regrava o mesmo arquivo.",
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "BinarySource",
+                        "storeSettings": {
+                            "type": "HttpReadSettings",
+                            "requestMethod": "GET"
+                        }
+                    },
+                    "sink": {
+                        "type": "BinarySink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "ds_cvm_zip",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "competencia": {
+                                "value": "@pipeline().parameters.competencia",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "ds_lake_arquivo",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "container": "bronze",
+                            "pasta": {
+                                "value": "@concat('cvm/inf_diario/competencia=', pipeline().parameters.competencia, '/carga=', pipeline().parameters.carga)",
+                                "type": "Expression"
+                            },
+                            "arquivo": {
+                                "value": "@concat('inf_diario_fi_', pipeline().parameters.competencia, '.zip')",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "copiar_zip_para_staging",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "copiar_origem_para_bronze",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "description": "Passo 2. ZIP da bronze → CSV → Parquet na staging, sem Data Flow. preserveZipFileNameAsFolder=false: sem isso o Copy cria uma subpasta com o nome do ZIP. Tipos: decimal e inteiro pelo dicionário; a data fica texto ISO, porque o Copy não tem tipo de data sem hora (Datetime viraria INT96 no Parquet). allowDataTruncation=false: valor que não cabe derruba a cópia em vez de arredondar. A Function confere o resultado no passo 3 (D2b).",
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": false,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings",
+                            "compressionProperties": {
+                                "type": "ZipDeflateReadSettings",
+                                "preserveZipFileNameAsFolder": false
+                            }
+                        }
+                    },
+                    "sink": {
+                        "type": "ParquetSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "ParquetWriteSettings"
+                        }
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": false,
+                            "treatBooleanAsNumber": false,
+                            "culture": "en-US"
+                        },
+                        "mappings": [
+                            {
+                                "source": {
+                                    "name": "TP_FUNDO_CLASSE",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "TP_FUNDO_CLASSE"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "CNPJ_FUNDO_CLASSE",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "CNPJ_FUNDO_CLASSE"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "ID_SUBCLASSE",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "ID_SUBCLASSE"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "DT_COMPTC",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "DT_COMPTC"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "VL_TOTAL",
+                                    "type": "Decimal"
+                                },
+                                "sink": {
+                                    "name": "VL_TOTAL"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "VL_QUOTA",
+                                    "type": "Decimal"
+                                },
+                                "sink": {
+                                    "name": "VL_QUOTA"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "VL_PATRIM_LIQ",
+                                    "type": "Decimal"
+                                },
+                                "sink": {
+                                    "name": "VL_PATRIM_LIQ"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "CAPTC_DIA",
+                                    "type": "Decimal"
+                                },
+                                "sink": {
+                                    "name": "CAPTC_DIA"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "RESG_DIA",
+                                    "type": "Decimal"
+                                },
+                                "sink": {
+                                    "name": "RESG_DIA"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "NR_COTST",
+                                    "type": "Int64"
+                                },
+                                "sink": {
+                                    "name": "NR_COTST"
+                                }
+                            }
+                        ]
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "ds_lake_csv_zip",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "container": "bronze",
+                            "pasta": {
+                                "value": "@concat('cvm/inf_diario/competencia=', pipeline().parameters.competencia, '/carga=', pipeline().parameters.carga)",
+                                "type": "Expression"
+                            },
+                            "arquivo": {
+                                "value": "@concat('inf_diario_fi_', pipeline().parameters.competencia, '.zip')",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "ds_lake_parquet",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "container": "staging",
+                            "pasta": {
+                                "value": "@concat('cvm/inf_diario/carga=', pipeline().parameters.carga, '/competencia=', pipeline().parameters.competencia)",
+                                "type": "Expression"
+                            },
+                            "arquivo": {
+                                "value": "@concat('inf_diario_fi_', pipeline().parameters.competencia, '.parquet')",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "validar_staging",
+                "description": "Passo 3. A Function confere bronze × staging: contagem, SHA-256 canônico e chave única (D7). Sem retentativa: a resposta é determinística, e repetir não muda o resultado. Responde em até 230 s, o limite da atividade.",
+                "type": "AzureFunctionActivity",
+                "dependsOn": [
+                    {
+                        "activity": "copiar_zip_para_staging",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "linkedServiceName": {
+                    "referenceName": "ls_funcao",
+                    "type": "LinkedServiceReference"
+                },
+                "typeProperties": {
+                    "functionName": "validar",
+                    "method": "POST",
+                    "body": {
+                        "value": "@json(concat('{\"competencia\":\"', pipeline().parameters.competencia, '\",\"carga\":\"', pipeline().parameters.carga, '\"}'))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "validacao_ok",
+                "description": "Se a Function responde ok=false, a atividade Fail derruba a carga aqui: a prata não foi tocada (D6). Não depende de como a atividade trata o status HTTP.",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "validar_staging",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(activity('validar_staging').output.ok, true)",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "falhar_validacao_ok",
+                            "type": "Fail",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "message": {
+                                    "value": "@join(activity('validar_staging').output.falhas, '; ')",
+                                    "type": "Expression"
+                                },
+                                "errorCode": "CVM_VALIDACAO"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "prata_existe",
+                "type": "GetMetadata",
+                "dependsOn": [
+                    {
+                        "activity": "validacao_ok",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "description": "Na primeira carga do mês a partição não existe. Com 'exists' na lista, a atividade responde false em vez de falhar.",
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "dataset": {
+                        "referenceName": "ds_lake_pasta",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "container": "prata",
+                            "pasta": {
+                                "value": "@concat('cvm/inf_diario/competencia=', pipeline().parameters.competencia)",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "fieldList": [
+                        "exists"
+                    ],
+                    "storeSettings": {
+                        "type": "AzureBlobFSReadSettings",
+                        "recursive": true,
+                        "enablePartitionDiscovery": false
+                    },
+                    "formatSettings": {
+                        "type": "BinaryReadSettings"
+                    }
+                }
+            },
+            {
+                "name": "apagar_prata_se_existe",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "prata_existe",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "description": "Passo 4. A partição do mês sai inteira: uma linha que a CVM removeu não sobra na prata (D6).",
+                "typeProperties": {
+                    "expression": {
+                        "value": "@activity('prata_existe').output.exists",
+                        "type": "Expression"
+                    },
+                    "ifTrueActivities": [
+                        {
+                            "name": "apagar_prata",
+                            "type": "Delete",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "policy": {
+                                "timeout": "0.00:05:00",
+                                "retry": 2,
+                                "retryIntervalInSeconds": 60,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "typeProperties": {
+                                "dataset": {
+                                    "referenceName": "ds_lake_pasta",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "container": "prata",
+                                        "pasta": {
+                                            "value": "@concat('cvm/inf_diario/competencia=', pipeline().parameters.competencia)",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                },
+                                "enableLogging": false,
+                                "storeSettings": {
+                                    "type": "AzureBlobFSReadSettings",
+                                    "recursive": true,
+                                    "enablePartitionDiscovery": false
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "copiar_staging_para_prata",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "apagar_prata_se_existe",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "description": "Passo 5. Staging → prata, binário: o arquivo validado é o que vai para a prata, sem reprocessar. Entre o passo 4 e este, o mês fica vazio (D6, limite declarado).",
+                "policy": {
+                    "timeout": "0.00:10:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "BinarySource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "BinaryReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "BinarySink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings",
+                            "copyBehavior": "PreserveHierarchy"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "ds_lake_pasta",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "container": "staging",
+                            "pasta": {
+                                "value": "@concat('cvm/inf_diario/carga=', pipeline().parameters.carga, '/competencia=', pipeline().parameters.competencia)",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "ds_lake_pasta",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "container": "prata",
+                            "pasta": {
+                                "value": "@concat('cvm/inf_diario/competencia=', pipeline().parameters.competencia)",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "reconciliar_prata",
+                "description": "Passo 6. A Function confere bronze × prata, refaz o ouro do mês, confere o ouro contra a prata e grava o manifesto (a carga vigente). A entrada HTTP da Function faz o HEAD na CVM e grava ETag e Last-Modified no manifesto: o ADF não lê cabeçalho HTTP (D3).",
+                "type": "AzureFunctionActivity",
+                "dependsOn": [
+                    {
+                        "activity": "copiar_staging_para_prata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "linkedServiceName": {
+                    "referenceName": "ls_funcao",
+                    "type": "LinkedServiceReference"
+                },
+                "typeProperties": {
+                    "functionName": "reconciliar",
+                    "method": "POST",
+                    "body": {
+                        "value": "@json(concat('{\"competencia\":\"', pipeline().parameters.competencia, '\",\"carga\":\"', pipeline().parameters.carga, '\"}'))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "reconciliacao_ok",
+                "description": "ok=false na reconciliação derruba a carga e dispara o alerta; o manifesto não é gravado e a staging fica para diagnóstico.",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "reconciliar_prata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(activity('reconciliar_prata').output.ok, true)",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "falhar_reconciliacao_ok",
+                            "type": "Fail",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "message": {
+                                    "value": "@join(activity('reconciliar_prata').output.falhas, '; ')",
+                                    "type": "Expression"
+                                },
+                                "errorCode": "CVM_RECONCILIACAO"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "apagar_staging",
+                "type": "Delete",
+                "dependsOn": [
+                    {
+                        "activity": "reconciliacao_ok",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "description": "Passo 7. A staging da carga sai. Se a carga falhou antes daqui, a staging fica para diagnóstico, e o ciclo de vida a apaga em 7 dias (infra/modules/ambiente/lake.tf).",
+                "policy": {
+                    "timeout": "0.00:05:00",
+                    "retry": 2,
+                    "retryIntervalInSeconds": 60,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "dataset": {
+                        "referenceName": "ds_lake_pasta",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "container": "staging",
+                            "pasta": {
+                                "value": "@concat('cvm/inf_diario/carga=', pipeline().parameters.carga, '/competencia=', pipeline().parameters.competencia)",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    "enableLogging": false,
+                    "storeSettings": {
+                        "type": "AzureBlobFSReadSettings",
+                        "recursive": true,
+                        "enablePartitionDiscovery": false
+                    }
+                }
+            }
+        ],
+        "parameters": {
+            "competencia": {
+                "type": "string"
+            },
+            "carga": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "cvm"
+        },
+        "annotations": []
+    }
+}

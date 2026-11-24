@@ -42,7 +42,10 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
 ### D2b. Plano B para os tipos da prata
 
 - **Contexto:** o mapeamento de tipos da atividade Copy não expõe precisão e escala do decimal, e
-  o tipo de data que ela grava no Parquet só se confirma executando.
+  a documentação não diz com que precisão ele grava o `Decimal` no Parquet. A data vai como
+  texto ISO, porque o Copy não tem data sem hora e `Datetime` viraria `INT96`
+  ([`adf.md`](adf.md#passo-2-zip--parquet-sem-data-flow)). O tipo físico só se confirma
+  executando.
 - **Decisão:** se o Copy não gravar os tipos do dicionário, a Function escreve a prata com o
   DuckDB, do mesmo jeito que já escreve o ouro: o Parquet é gerado no disco temporário da
   Function e gravado no lake pelo SDK do ADLS (`azure-storage-file-datalake`) com a identidade
@@ -68,7 +71,9 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
 - **Consequência:** a correção não depende de detectar mudança. Recarregar a janela inteira
   substitui o que mudou e regrava igual o que não mudou (D6). Custo: ~12 downloads de ~11 MB por
   semana. Pular o mês cujo `ETag` não mudou é uma otimização futura, e o manifesto já guarda o
-  `ETag` para isso.
+  `ETag` para isso. Quem lê o `ETag` e o `Last-Modified` é a entrada HTTP da Function, com um
+  `HEAD` na URL do mês: o Copy não expõe os cabeçalhos da resposta, e a atividade Web não faz
+  `HEAD` ([`adf.md`](adf.md#passos-3-e-6-o-contrato-com-a-function)).
 - **Premissas e riscos aceitos:**
   - O contrato diz só "semanalmente". A regravação observada foi num sábado (14/11/2026), e o
     gatilho de domingo parte disso. Se a CVM mudar o dia, a janela semanal fica até uma semana

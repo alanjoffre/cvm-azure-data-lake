@@ -1,0 +1,11 @@
+{
+    "name": "ls_kv",
+    "properties": {
+        "description": "Key Vault do ambiente, lido pela identidade gerenciada (Key Vault Secrets User). Guarda só a chave da Function (D11).",
+        "annotations": [],
+        "type": "AzureKeyVault",
+        "typeProperties": {
+            "baseUrl": "https://kv.definido-no-deploy.invalid/"
+        }
+    }
+}

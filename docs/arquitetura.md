@@ -92,7 +92,7 @@ por exemplo) fica na fila, e duas cargas nunca mexem no mesmo mês ao mesmo temp
 ```mermaid
 flowchart TB
     subgraph PAI["pl_inf_diario (concurrency 1)"]
-        S["Parâmetros: janela (M..M-n)<br/>ou competencias"] --> L["Lista de competências AAAAMM<br/>(expressão, fora do laço)"]
+        S["Parâmetros: janela (M..M-n)<br/>ou competencias"] --> L["escolher_meses → variável meses<br/>(deslocamentos ou a lista)"]
         L --> F{"ForEach competência<br/>(lotes de 4, em paralelo)"}
         F --> X["Execute Pipeline:<br/>pl_inf_diario_mes(competência, carga)"]
     end
@@ -100,10 +100,12 @@ flowchart TB
         C1["Passo 1: Copy: HTTP → bronze<br/>.../competencia=AAAAMM/carga=RUN_ID/arquivo.zip"]
         C1 --> C2["Passo 2: Copy: ZIP da bronze → staging<br/>staging/.../carga=RUN_ID/competencia=AAAAMM/<br/>DelimitedText (ZipDeflate, ;) → Parquet"]
         C2 --> V["Passo 3: Function validar:<br/>contagem + SHA-256 bronze × staging,<br/>chave única"]
-        V --> D["Passo 4: Delete: prata/.../competencia=AAAAMM/"]
+        V --> G{"ok = true?<br/>senão: Fail"}
+        G --> D["Passo 4: Get Metadata + Delete<br/>prata/.../competencia=AAAAMM/, se existe"]
         D --> C3["Passo 5: Copy: staging → prata/.../competencia=AAAAMM/"]
         C3 --> R["Passo 6: Function reconciliar:<br/>bronze × prata, refaz o ouro do mês,<br/>grava o manifesto do mês"]
-        R --> DS["Passo 7: Delete: staging da carga"]
+        R --> G2{"ok = true?<br/>senão: Fail"}
+        G2 --> DS["Passo 7: Delete: staging da carga"]
     end
     X -.-> C1
 ```
@@ -114,7 +116,8 @@ Pontos de desenho:
   Uma regra de ciclo de vida apaga as versões com mais de 90 dias.
 - **A partição só é trocada depois de validada** (D6, D7). A versão nova vai primeiro para a
   staging, e a Function confere contagem, hash e chave contra a bronze. Se diverge, a Function
-  responde erro, a atividade falha, e a prata continua com a versão anterior.
+  responde `ok: false`, uma atividade Fail derruba a carga, e a prata continua com a versão
+  anterior.
 - **Prata é substituída por mês inteiro**, nunca recebe append (D6). Rodar duas vezes dá o mesmo
   resultado, e uma reapresentação substitui a anterior sem deixar linhas velhas.
 - **Janela de reprocessamento** (D3). O que é mais antigo que M-11 está congelado e não volta a
@@ -123,17 +126,21 @@ Pontos de desenho:
 - **Cada mês escreve só nos próprios caminhos.** A staging e o manifesto têm a competência no
   caminho, então os 4 meses em paralelo nunca gravam no mesmo arquivo.
 - **Na descompactação, `preserveZipFileNameAsFolder = false`.** Sem isso, o Copy cria uma subpasta
-  com o nome do ZIP, e os caminhos dos passos seguintes não batem. Os arquivos Parquet saem com o
-  nome que o Copy gera, e quem lê usa a pasta inteira (`.../competencia=AAAAMM/*.parquet`).
+  com o nome do ZIP, e os caminhos dos passos seguintes não batem. O Parquet tem nome fixo
+  (`inf_diario_fi_AAAAMM.parquet`), e quem lê usa a pasta inteira
+  (`.../competencia=AAAAMM/*.parquet`).
 - **O Delete seguido de Copy não é atômico.** Entre os passos 4 e 5, um leitor concorrente veria o
   mês vazio. Se o passo 5 falhar, o mês fica vazio até a próxima carga, e o alerta avisa. Aqui o
   único leitor é a Function, no passo 6. Com leitores concorrentes, a saída é um formato de tabela
   com transação (Delta Lake), registrado em D6 como evolução.
-- **Retentativa só onde é segura.** Copy e Delete têm retentativa (2 vezes). As chamadas à
-  Function não têm, e a resposta dela tem de chegar em até 230 s, o limite do ADF para essa
-  atividade.
-- **Falha não é silenciosa.** A Function responde erro quando a prova não bate, o pipeline falha e
-  o alerta pela métrica de execuções com falha do ADF manda e-mail.
+- **Retentativa só onde é segura.** Copy, Delete e Get Metadata têm retentativa (2 vezes). As
+  chamadas à Function não têm, e a resposta dela tem de chegar em até 230 s, o limite do ADF
+  para essa atividade.
+- **Falha não é silenciosa.** Quando a prova não bate, a Function responde `ok: false`, a
+  atividade Fail seguinte derruba o pipeline, e o alerta pela métrica de execuções com falha do
+  ADF manda e-mail.
+
+Cada atividade, as expressões e os parâmetros do ARM estão em [`adf.md`](adf.md).
 
 ## 4. Camadas e layout no ADLS
 
@@ -142,8 +149,8 @@ torna ADLS Gen2), e um container por camada:
 
 ```
 bronze/cvm/inf_diario/competencia=202609/carga=<RUN_ID>/inf_diario_fi_202609.zip
-staging/cvm/inf_diario/carga=<RUN_ID>/competencia=202609/*.parquet
-prata/cvm/inf_diario/competencia=202609/*.parquet
+staging/cvm/inf_diario/carga=<RUN_ID>/competencia=202609/inf_diario_fi_202609.parquet
+prata/cvm/inf_diario/competencia=202609/inf_diario_fi_202609.parquet
 ouro/cvm/inf_diario_mensal/competencia=202609/*.parquet
 controle/cvm/inf_diario/competencia=202609/manifesto.json
 controle/cvm/inf_diario/competencia=202609/carga=<RUN_ID>.json
@@ -153,12 +160,13 @@ controle/cvm/inf_diario/competencia=202609/carga=<RUN_ID>.json
 |---|---|---|
 | bronze | o ZIP exatamente como veio | imutável; uma versão por carga; ciclo de vida de 90 dias |
 | staging | o Parquet da carga, antes de validar | apagado no fim da carga; ciclo de vida de 7 dias para o que sobrar de uma falha |
-| prata | Parquet com os campos do dicionário da CVM (data, decimal, inteiro) | uma partição por mês; substituída inteira; chave única (D4) |
+| prata | Parquet com os campos do dicionário da CVM: decimal, inteiro e a data em texto ISO ([`adf.md`](adf.md#passo-2-zip--parquet-sem-data-flow)) | uma partição por mês; substituída inteira; chave única (D4) |
 | ouro | por fundo/classe, subclasse e mês: PL e cotistas no último dia, captação, resgate e captação líquida no mês, variação da cota no mês | refeito por mês a partir da prata |
 | controle | por mês: o manifesto (carga vigente, linhas, hash, ETag) e um relatório por carga | escrito pela Function, um arquivo por mês |
 
-**Tipos na prata.** O tipo físico que o Copy do ADF grava no Parquet (precisão e escala do
-decimal, `DATE` ou timestamp) só se confirma executando na Azure. A reconciliação converte os dois
+**Tipos na prata.** O Copy do ADF não tem tipo de data sem hora, então a data vai como texto
+ISO, e `NR_COTST` vai como inteiro de 64 bits. A precisão e a escala com que ele grava o decimal
+não estão documentadas e só se confirmam executando na Azure. A reconciliação converte os dois
 lados para a escala do dicionário antes do hash, e uma divergência derruba a carga em vez de passar
 em silêncio. Se o Copy não gravar os tipos do dicionário, vale o plano B (D2b).
 
@@ -233,7 +241,7 @@ domingos do semanal.
 
 | Item | Uso | Ordem de grandeza |
 |---|---|---|
-| ADF: execuções de atividade | ~92 cargas × ~8 atividades (com o Execute Pipeline) ≈ 750; contagem exata a conferir na calculadora | ~US$ 1 por 1.000 execuções |
+| ADF: execuções de atividade | ~92 cargas × ~12 atividades (com o Execute Pipeline e as checagens) + ~30 execuções do pai × 3 ≈ 1.200; contagem exata a conferir na calculadora | ~US$ 1 por 1.000 execuções |
 | ADF: cópia (DIU-hora) | 3 cópias por carga, poucos segundos cada (cobrança mínima de 1 minuto) | alguns dólares |
 | ADLS Gen2 | ~1 GB (bronze com 90 dias + prata + ouro) | centavos |
 | Function (Flex Consumption) | ~184 chamadas de segundos (2 por carga) | a conferir na calculadora |

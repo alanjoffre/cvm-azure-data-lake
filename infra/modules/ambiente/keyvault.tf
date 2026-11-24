@@ -1,7 +1,7 @@
 # Key Vault só para o que é segredo (D11): a chave da Function que o ADF usa para chamá-la.
 #
 # O segredo NÃO é criado aqui. A chave da Function só existe depois que o código é publicado, e
-# um segredo criado pelo Terraform ficaria gravado em texto no estado. A etapa de deploy (F5)
+# um segredo criado pelo Terraform ficaria gravado em texto no estado. A etapa de deploy
 # cria a chave na Function e grava no cofre com a CLI, com o papel Key Vault Secrets Officer
 # atribuído em rbac.tf. O estado guarda só o cofre.
 

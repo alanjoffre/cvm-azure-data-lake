@@ -1,0 +1,36 @@
+{
+    "name": "ds_lake_pasta",
+    "properties": {
+        "description": "Uma pasta do lake, como binário: cópia de pasta inteira, Delete e Get Metadata.",
+        "linkedServiceName": {
+            "referenceName": "ls_adls_lake",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "container": {
+                "type": "string"
+            },
+            "pasta": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "lake"
+        },
+        "annotations": [],
+        "type": "Binary",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": {
+                    "value": "@dataset().container",
+                    "type": "Expression"
+                },
+                "folderPath": {
+                    "value": "@dataset().pasta",
+                    "type": "Expression"
+                }
+            }
+        }
+    }
+}

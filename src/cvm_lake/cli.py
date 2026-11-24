@@ -108,7 +108,7 @@ def para_markdown(r: dict[str, Any]) -> str:
         "",
         "`funcao_s` = validar + reconciliar, o trabalho que a Function fará. Medido nesta máquina, "
         f"não na Azure: a folga contra os {LIMITE_FUNCAO_S} s que o ADF espera pela resposta da "
-        "Function se confirma na F4.",
+        "Function se confirma na execução na Azure.",
         "",
         "| Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Função (s) |",
         "|---|---|---:|---:|---:|---:|",

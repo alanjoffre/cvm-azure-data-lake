@@ -1,0 +1,45 @@
+{
+    "name": "ds_lake_parquet",
+    "properties": {
+        "description": "Parquet da staging, com nome fixo por mês (sem o nome fixo, o Copy repetiria o nome do CSV, com extensão .csv).",
+        "linkedServiceName": {
+            "referenceName": "ls_adls_lake",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "container": {
+                "type": "string"
+            },
+            "pasta": {
+                "type": "string"
+            },
+            "arquivo": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "lake"
+        },
+        "annotations": [],
+        "type": "Parquet",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": {
+                    "value": "@dataset().container",
+                    "type": "Expression"
+                },
+                "folderPath": {
+                    "value": "@dataset().pasta",
+                    "type": "Expression"
+                },
+                "fileName": {
+                    "value": "@dataset().arquivo",
+                    "type": "Expression"
+                }
+            },
+            "compressionCodec": "snappy"
+        },
+        "schema": []
+    }
+}

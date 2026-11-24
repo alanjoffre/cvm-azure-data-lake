@@ -41,7 +41,8 @@ COLUNAS: tuple[Coluna, ...] = (
     Coluna("VL_PATRIM_LIQ", "DECIMAL(17,2)", _numerico(17, 2)),
     Coluna("CAPTC_DIA", "DECIMAL(17,2)", _numerico(17, 2)),
     Coluna("RESG_DIA", "DECIMAL(17,2)", _numerico(17, 2)),
-    Coluna("NR_COTST", "INTEGER", _numerico(10, 0)),
+    # int(10) no dicionário: até 9.999.999.999, além dos 32 bits do INTEGER.
+    Coluna("NR_COTST", "BIGINT", _numerico(10, 0)),
 )
 
 NOMES: tuple[str, ...] = tuple(c.nome for c in COLUNAS)
@@ -91,7 +92,7 @@ def sql_linha_canonica(alias: str = "t") -> str:
     campos = []
     for c in COLUNAS:
         col = f"{alias}.{_q(c.nome)}"
-        # DECIMAL(p,s) → VARCHAR no DuckDB sai sempre com s casas; INTEGER sai sem zeros.
+        # DECIMAL(p,s) → VARCHAR no DuckDB sai sempre com s casas; inteiro sai sem zeros.
         texto = (f"strftime({col}, '%Y-%m-%d')" if c.tipo == "DATE"
                  else f"CAST({col} AS VARCHAR)")
         campos.append(f"COALESCE(NULLIF({texto}, ''), '{NULO_CANONICO}')")

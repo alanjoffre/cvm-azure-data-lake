@@ -11,8 +11,8 @@ confirma fica listado à parte.
 | Carga, janela de reprocessamento, republicação, contagem e hash | pytest com dados sintéticos no formato da CVM, e a prova completa com os arquivos reais baixados da CVM | a lógica da tese: substitui o mês sem duplicar e sem perder |
 | Bronze, staging, prata e ouro | pastas locais com o mesmo layout do ADLS. O código só troca a raiz (pasta local ou `abfss://`). Ouro em DuckDB | camadas, partições e agregados |
 | Terraform | [`infra/validar.sh`](../infra/validar.sh): `terraform fmt -check`, `terraform validate`, tflint (com as regras do azurerm), Checkov e `terraform test` com `mock_provider` (16 testes, sem conta; o da raiz roda com dev e com prod) | infraestrutura coerente e com as regras de segurança do desenho |
-| ADF (JSON) | `@microsoft/azure-data-factory-utilities` (validate + export do ARM) e testes próprios de referência entre recursos e parâmetros | o JSON é válido (esquema e referências) e gera o ARM; não prova a execução |
-| ARM gerado | arm-ttk | boas práticas do template |
+| ADF (JSON) | [`ci/adf/validar.sh`](../ci/adf/validar.sh): `@microsoft/azure-data-factory-utilities` (validate + export do ARM) e [`tests/test_adf.py`](../tests/test_adf.py) (31 testes: referências, `dependsOn` que o validador não confere, caminhos iguais aos do código, contrato com a Function, meses dos gatilhos contra a janela, parâmetros do ARM) | o JSON é válido (esquema e referências), gera o ARM e faz o que o código local faz; não prova a execução ([`adf.md`](adf.md#validar)) |
+| ARM gerado | arm-ttk no CI (agente Linux com PowerShell), sobre o ARM que o `ci/adf/validar.sh` exporta | boas práticas do template |
 | Azure Pipelines (YAML) | validação contra o esquema publicado; os scripts das etapas rodam no CI do GitHub | a estrutura do arquivo; variáveis e templates só se resolvem no Azure DevOps |
 | Tudo | GitHub Actions a cada push | selo verde |
 
@@ -76,15 +76,16 @@ Delete) e dos dois pipelines, na mesma ordem. O código da Function (`cvm_lake.f
 mesmo que vai para a Azure. Diferenças declaradas:
 - o Copy ZIP → Parquet é feito pelo leitor de CSV do DuckDB, já com os tipos do dicionário. O
   tipo físico que o Copy do ADF grava só se confirma na Azure. Os testes cobrem as variantes
-  "tudo como texto" e "cota como double". Esta última muda o hash quando a cota tem mais
-  dígitos do que o double guarda, o que acontece em 1.923 linhas de setembro
+  "tudo como texto", "cota como double" e a dos tipos do mapeamento do JSON (texto, `Decimal`
+  e `Int64`). A do double muda o hash quando a cota tem mais dígitos do que o double guarda, o
+  que acontece em 1.923 linhas de setembro
   ([`dado.md`](dado.md#por-que-o-tipo-da-cota-importa));
 - o leitor tipado aceita, sem erro, um decimal com casas a mais. Quem barra é o validador, pelo
   padrão do dicionário (teste `test_um_mes_ruim_nao_impede_os_outros`);
 - o ForEach roda os meses em sequência. No ADF são lotes em paralelo, e cada mês só escreve nos
   próprios caminhos;
 - os tempos do relatório são desta máquina. A folga contra os 230 s que o ADF espera pela
-  resposta da Function (menos de 3 s no pior mês, medido aqui) se confirma na F4.
+  resposta da Function (menos de 3 s no pior mês, medido aqui) se confirma na execução na Azure.
 
 Limite: a tese é provada pela execução local da mesma lógica, nas mesmas pastas e com a mesma
 janela. A equivalência com o ADF executando só se confirma implantando.
@@ -94,10 +95,17 @@ janela. A equivalência com o ADF executando só se confirma implantando.
 O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.md`](runbook.md):
 - O ADF executando: expressões, Copy de ZIP para Parquet com `preserveZipFileNameAsFolder = false`,
   ForEach com Execute Pipeline, `concurrency: 1` e os gatilhos (inclusive o nome do fuso de
-  Brasília no gatilho).
-- Os tipos físicos que o Copy grava no Parquet (precisão e escala do decimal, `DATE` ou
-  timestamp). Se não forem os do dicionário, vale o plano B (D2b).
-- A atividade Azure Function falhando quando a Function responde erro.
+  Brasília no gatilho). As expressões são avaliadas nos testes por um avaliador próprio
+  ([`adf_expressao.py`](../tests/adf_expressao.py)), não pelo motor do ADF; ele avalia os dois
+  ramos do `if`, como o ADF, mas a equivalência só se confirma executando.
+- Os tipos físicos que o Copy grava no Parquet: precisão e escala do `Decimal`, que a
+  documentação não descreve, e o `Int64`. Se não forem os do dicionário, a reconciliação acusa
+  pelo hash e vale o plano B (D2b).
+- A atividade Azure Function: o `output.ok` lido pela guarda, o limite de 230 s no Flex
+  Consumption e o que a atividade faz com cada status HTTP de erro.
+- O Delete de uma pasta inteira no ADLS Gen2 e o Get Metadata `exists` de uma partição que não
+  existe.
+- A entrada HTTP da Function fazendo o `HEAD` na CVM e entregando `ETag` e `Last-Modified`.
 - Permissões reais: identidade gerenciada no lake e no Key Vault, chave compartilhada desligada no
   lake, e o host da Function (Flex Consumption) acessando o próprio armazenamento por identidade.
 - O `terraform apply` com a chave compartilhada desligada nas contas: o provider configurado com

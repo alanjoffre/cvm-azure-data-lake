@@ -1,0 +1,127 @@
+{
+    "name": "pl_inf_diario",
+    "properties": {
+        "description": "Janela de reprocessamento (D3): de M-de a M-ate a partir da data de referência, no horário de Brasília, ou a lista explícita em 'competencias' (carga inicial e reprocessamento). concurrency=1: uma execução que chega com outra em andamento espera na fila.",
+        "concurrency": 1,
+        "activities": [
+            {
+                "name": "escolher_meses",
+                "type": "IfCondition",
+                "dependsOn": [],
+                "userProperties": [],
+                "description": "Sem lista, os itens são os deslocamentos de..ate (0 = mês da referência); com lista, os próprios AAAAMM. O mês é calculado no ForEach, fora deste passo.",
+                "typeProperties": {
+                    "expression": {
+                        "value": "@empty(pipeline().parameters.competencias)",
+                        "type": "Expression"
+                    },
+                    "ifTrueActivities": [
+                        {
+                            "name": "meses_da_janela",
+                            "type": "SetVariable",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "meses",
+                                "value": {
+                                    "value": "@range(pipeline().parameters.de, add(sub(pipeline().parameters.ate, pipeline().parameters.de), 1))",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ],
+                    "ifFalseActivities": [
+                        {
+                            "name": "meses_da_lista",
+                            "type": "SetVariable",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "meses",
+                                "value": {
+                                    "value": "@pipeline().parameters.competencias",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "para_cada_competencia",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "escolher_meses",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "description": "Lotes de 4 meses em paralelo; cada mês grava só nos próprios caminhos. A expressão do mês é total nos dois modos: o if interno entrega 0 ao subtractFromTime quando o item é um AAAAMM da lista. Um mês que falha não para os outros; o pai termina como falho.",
+                "typeProperties": {
+                    "items": {
+                        "value": "@variables('meses')",
+                        "type": "Expression"
+                    },
+                    "isSequential": false,
+                    "batchCount": 4,
+                    "activities": [
+                        {
+                            "name": "carregar_mes",
+                            "type": "ExecutePipeline",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "pipeline": {
+                                    "referenceName": "pl_inf_diario_mes",
+                                    "type": "PipelineReference"
+                                },
+                                "waitOnCompletion": true,
+                                "parameters": {
+                                    "competencia": {
+                                        "value": "@if(empty(pipeline().parameters.competencias), subtractFromTime(startOfMonth(convertFromUtc(if(empty(pipeline().parameters.referencia), utcNow(), pipeline().parameters.referencia), 'E. South America Standard Time')), if(empty(pipeline().parameters.competencias), item(), 0), 'Month', 'yyyyMM'), string(item()))",
+                                        "type": "Expression"
+                                    },
+                                    "carga": {
+                                        "value": "@pipeline().RunId",
+                                        "type": "Expression"
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "de": {
+                "type": "int",
+                "defaultValue": 0
+            },
+            "ate": {
+                "type": "int",
+                "defaultValue": 1
+            },
+            "competencias": {
+                "type": "array",
+                "defaultValue": []
+            },
+            "referencia": {
+                "type": "string",
+                "defaultValue": ""
+            }
+        },
+        "variables": {
+            "meses": {
+                "type": "Array",
+                "defaultValue": []
+            }
+        },
+        "folder": {
+            "name": "cvm"
+        },
+        "annotations": []
+    }
+}

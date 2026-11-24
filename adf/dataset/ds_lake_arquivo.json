@@ -1,0 +1,43 @@
+{
+    "name": "ds_lake_arquivo",
+    "properties": {
+        "description": "Um arquivo no lake, como binário (o ZIP da bronze).",
+        "linkedServiceName": {
+            "referenceName": "ls_adls_lake",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "container": {
+                "type": "string"
+            },
+            "pasta": {
+                "type": "string"
+            },
+            "arquivo": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "lake"
+        },
+        "annotations": [],
+        "type": "Binary",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": {
+                    "value": "@dataset().container",
+                    "type": "Expression"
+                },
+                "folderPath": {
+                    "value": "@dataset().pasta",
+                    "type": "Expression"
+                },
+                "fileName": {
+                    "value": "@dataset().arquivo",
+                    "type": "Expression"
+                }
+            }
+        }
+    }
+}

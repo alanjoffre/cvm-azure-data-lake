@@ -1,0 +1,29 @@
+{
+    "name": "ds_cvm_zip",
+    "properties": {
+        "description": "O ZIP de um mês na CVM, lido como binário (sem descompactar): a bronze guarda o arquivo exatamente como veio (D5).",
+        "linkedServiceName": {
+            "referenceName": "ls_http_cvm",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "competencia": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "cvm"
+        },
+        "annotations": [],
+        "type": "Binary",
+        "typeProperties": {
+            "location": {
+                "type": "HttpServerLocation",
+                "relativeUrl": {
+                    "value": "@concat('dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_', dataset().competencia, '.zip')",
+                    "type": "Expression"
+                }
+            }
+        }
+    }
+}

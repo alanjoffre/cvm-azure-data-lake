@@ -50,6 +50,11 @@ class Lake:
         c, r = conferir_competencia(competencia), conferir_carga(carga)
         return self._p("staging", "cvm", "inf_diario", f"carga={r}", f"competencia={c}")
 
+    def staging_parquet(self, competencia: str, carga: str) -> str:
+        """O arquivo que o Copy grava na staging, com o nome fixo de adf/ (docs/adf.md)."""
+        c = conferir_competencia(competencia)
+        return f"{self.staging(c, carga)}/inf_diario_fi_{c}.parquet"
+
     # prata: uma partição por mês, substituída inteira (D6)
     def prata(self, competencia: str) -> str:
         c = conferir_competencia(competencia)
@@ -73,5 +78,5 @@ class Lake:
 
 
 def parquets(pasta: str) -> str:
-    """Quem lê uma camada lê a pasta inteira: o nome do arquivo é o que o Copy do ADF gerar."""
+    """Quem lê uma camada lê a pasta inteira e não depende do nome do arquivo."""
     return f"{pasta}/*.parquet"

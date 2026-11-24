@@ -37,7 +37,7 @@ def sha256_canonico_csv(csv: bytes) -> tuple[int, str]:
             elif escala is not None:
                 # format "f": str(Decimal) sai em notação científica para zero ("0E-12").
                 saida.append(format(Decimal(valor).quantize(Decimal(1).scaleb(-escala)), "f"))
-            elif coluna.tipo == "INTEGER":
+            elif coluna.tipo == "BIGINT":
                 saida.append(str(int(valor)))
             else:
                 saida.append(valor)  # texto e data ISO já estão na forma canônica

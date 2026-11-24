@@ -1,0 +1,13 @@
+{
+    "name": "ls_http_cvm",
+    "properties": {
+        "description": "Servidor de dados abertos da CVM. Anônimo: a fonte é pública (D1, D11).",
+        "annotations": [],
+        "type": "HttpServer",
+        "typeProperties": {
+            "url": "https://dados.cvm.gov.br/",
+            "enableServerCertificateValidation": true,
+            "authenticationType": "Anonymous"
+        }
+    }
+}

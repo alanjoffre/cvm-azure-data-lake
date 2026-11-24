@@ -1,0 +1,50 @@
+{
+    "name": "ds_lake_csv_zip",
+    "properties": {
+        "description": "O CSV de dentro do ZIP da bronze. Formato físico da CVM conferido em docs/dado.md: ';', cabeçalho, sem aspas, ASCII. ISO-8859-1 é o encoding do dicionário e contém o ASCII.",
+        "linkedServiceName": {
+            "referenceName": "ls_adls_lake",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "container": {
+                "type": "string"
+            },
+            "pasta": {
+                "type": "string"
+            },
+            "arquivo": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "lake"
+        },
+        "annotations": [],
+        "type": "DelimitedText",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileSystem": {
+                    "value": "@dataset().container",
+                    "type": "Expression"
+                },
+                "folderPath": {
+                    "value": "@dataset().pasta",
+                    "type": "Expression"
+                },
+                "fileName": {
+                    "value": "@dataset().arquivo",
+                    "type": "Expression"
+                }
+            },
+            "columnDelimiter": ";",
+            "encodingName": "ISO-8859-1",
+            "compressionCodec": "ZipDeflate",
+            "escapeChar": "\\",
+            "quoteChar": "\"",
+            "firstRowAsHeader": true
+        },
+        "schema": []
+    }
+}

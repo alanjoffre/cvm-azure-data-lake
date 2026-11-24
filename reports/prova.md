@@ -64,7 +64,7 @@ T1 de 202610: 3 linhas alteradas (+1.000,00 em `VL_PATRIM_LIQ` e `CAPTC_DIA`), 1
 
 ## Tempos por mês
 
-`funcao_s` = validar + reconciliar, o trabalho que a Function fará. Medido nesta máquina, não na Azure: a folga contra os 230 s que o ADF espera pela resposta da Function se confirma na F4.
+`funcao_s` = validar + reconciliar, o trabalho que a Function fará. Medido nesta máquina, não na Azure: a folga contra os 230 s que o ADF espera pela resposta da Function se confirma na execução na Azure.
 
 | Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Função (s) |
 |---|---|---:|---:|---:|---:|

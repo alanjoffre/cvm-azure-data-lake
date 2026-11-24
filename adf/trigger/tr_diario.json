@@ -1,0 +1,46 @@
+{
+    "name": "tr_diario",
+    "properties": {
+        "description": "M e M-1, de segunda a sábado às 10:00 de Brasília: duas horas depois da atualização diária da CVM (D3).",
+        "annotations": [],
+        "runtimeState": "Started",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "pl_inf_diario",
+                    "type": "PipelineReference"
+                },
+                "parameters": {
+                    "de": 0,
+                    "ate": 1,
+                    "referencia": "@trigger().scheduledTime"
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Week",
+                "interval": 1,
+                "startTime": "2026-12-01T00:00:00",
+                "timeZone": "E. South America Standard Time",
+                "schedule": {
+                    "weekDays": [
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday"
+                    ],
+                    "hours": [
+                        10
+                    ],
+                    "minutes": [
+                        0
+                    ]
+                }
+            }
+        }
+    }
+}

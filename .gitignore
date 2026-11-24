@@ -20,6 +20,7 @@ crash.log
 *.auto.tfvars
 terraform.tfvars
 
-# Node (validador do ADF)
+# Node (validador do ADF): o pacote baixa o bundle em downloads/
 node_modules/
 build/
+ci/adf/downloads/

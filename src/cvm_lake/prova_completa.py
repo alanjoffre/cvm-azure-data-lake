@@ -116,7 +116,7 @@ def corromper_staging(lake: Lake, competencia: str, carga: str) -> None:
 
     É o defeito que só o hash pega: mesmo número de linhas, mesmas chaves, um centavo a mais.
     """
-    arquivo = Path(lake.staging(competencia, carga)) / "part-00000.parquet"
+    arquivo = Path(lake.staging_parquet(competencia, carga))
     con = duckdb.connect(":memory:")
     con.execute(f"""CREATE TABLE s AS SELECT *, row_number() OVER () AS n
                     FROM read_parquet({_literal(str(arquivo))})""")

@@ -1,0 +1,41 @@
+{
+    "name": "tr_semanal",
+    "properties": {
+        "description": "M-2 a M-11, domingo às 10:00 de Brasília: depois da regravação semanal, observada aos sábados (D3, premissa).",
+        "annotations": [],
+        "runtimeState": "Started",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "pl_inf_diario",
+                    "type": "PipelineReference"
+                },
+                "parameters": {
+                    "de": 2,
+                    "ate": 11,
+                    "referencia": "@trigger().scheduledTime"
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Week",
+                "interval": 1,
+                "startTime": "2026-12-01T00:00:00",
+                "timeZone": "E. South America Standard Time",
+                "schedule": {
+                    "weekDays": [
+                        "Sunday"
+                    ],
+                    "hours": [
+                        10
+                    ],
+                    "minutes": [
+                        0
+                    ]
+                }
+            }
+        }
+    }
+}
