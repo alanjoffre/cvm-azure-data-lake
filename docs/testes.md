@@ -33,6 +33,33 @@ Na republicação simulada (T0 → T1 do mesmo mês):
 Uma carga que não passa na validação não pode trocar a partição: o teste injeta uma divergência
 na staging e cobra que a prata continue com a versão anterior.
 
+O resultado com os arquivos reais está em [`reports/prova.md`](../reports/prova.md), gerado
+por `uv run cvm-lake prova` (código em [`prova_completa.py`](../src/cvm_lake/prova_completa.py)).
+A mesma rotina roda no pytest sobre dado sintético.
+
+Além disso, o hash canônico tem uma segunda implementação, em Python puro
+([`referencia.py`](../src/cvm_lake/referencia.py)), e a prova cobra que ela e o DuckDB cheguem
+ao mesmo SHA-256 em cada mês. A forma canônica é uma especificação, não um detalhe do DuckDB. Foi
+essa comparação que achou um defeito na primeira versão da referência: `str(Decimal)` escreve
+a cota zero como `0E-12`.
+
+## O substituto local do ADF
+
+[`adf_local.py`](../src/cvm_lake/adf_local.py) faz o papel das atividades que movem dado (Copy,
+Delete) e dos dois pipelines, na mesma ordem. O código da Function (`cvm_lake.funcao`) é o
+mesmo que vai para a Azure. Diferenças declaradas:
+- o Copy ZIP → Parquet é feito pelo leitor de CSV do DuckDB, já com os tipos do dicionário. O
+  tipo físico que o Copy do ADF grava só se confirma na Azure. Os testes cobrem as variantes
+  "tudo como texto" e "cota como double". Esta última muda o hash quando a cota tem mais
+  dígitos do que o double guarda, o que acontece em 1.923 linhas de setembro
+  ([`dado.md`](dado.md#por-que-o-tipo-da-cota-importa));
+- o leitor tipado aceita, sem erro, um decimal com casas a mais. Quem barra é o validador, pelo
+  padrão do dicionário (teste `test_um_mes_ruim_nao_impede_os_outros`);
+- o ForEach roda os meses em sequência. No ADF são lotes em paralelo, e cada mês só escreve nos
+  próprios caminhos;
+- os tempos do relatório são desta máquina. A folga contra os 230 s que o ADF espera pela
+  resposta da Function (menos de 3 s no pior mês, medido aqui) se confirma na F4.
+
 Limite: a tese é provada pela execução local da mesma lógica, nas mesmas pastas e com a mesma
 janela. A equivalência com o ADF executando só se confirma implantando.
 
@@ -55,6 +82,7 @@ O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.
 - O custo: contagem de execuções de atividade cobradas, preço do Flex Consumption e do Key Vault.
 
 Premissas da fonte, conferidas ao longo da operação:
-- o dia da atualização semanal da CVM (observado uma vez: sábado, 14/11/2026);
+- o dia da atualização semanal da CVM (observado duas vezes: sábados, 14/11/2026 e 21/11/2026,
+  quando setembro ganhou 95 linhas, ver [`dado.md`](dado.md#a-fonte-reescrevendo-o-passado-fato-observado));
 - se o `ETag` do servidor da CVM fica igual quando o arquivo é regravado sem mudança (necessário
   para a otimização futura do D3).

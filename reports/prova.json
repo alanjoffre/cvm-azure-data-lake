@@ -1,0 +1,366 @@
+{
+  "gerado_em": "2026-11-24T18:45:21+00:00",
+  "ok": true,
+  "competencias": [
+    "202609",
+    "202610",
+    "202611"
+  ],
+  "republicada": "202610",
+  "cargas": {
+    "T0": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9",
+    "reexecucao": "fdd49827-f7b1-4d57-b64e-4e5105f617dd",
+    "T1": "a0b2dbe2-937f-468a-a152-da7a1c11f307",
+    "divergencia": "5d4cdf81-928f-4199-b607-115e77376db9"
+  },
+  "meses": {
+    "202609": {
+      "origem": {
+        "url": "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_202609.zip",
+        "etag": "\"6b015e48-b18f8e\"",
+        "last_modified": "Sat, 21 Nov 2026 09:03:04 GMT",
+        "bytes": 11636622,
+        "sha256_zip": "aec55a84ce31c49fd8ee8c71f5b06eac95685bc130fb553f31a24db8cfa7a178",
+        "obtido_em": "2026-11-24T18:40:43+00:00"
+      },
+      "perfil": {
+        "linhas": 538758,
+        "fundos": 25594,
+        "pares_fundo_subclasse": 26016,
+        "datas": 22,
+        "primeira_data": "2026-09-01",
+        "ultima_data": "2026-09-30",
+        "linhas_sem_subclasse": 518548,
+        "bytes_zip": 11636622,
+        "bytes_csv": 54532914
+      },
+      "linhas_t0": 538758,
+      "sha256_t0": "4a38b432ac9783b93093665c355bff8dbadc0dc2dcfe4c698e36f5a545f63576",
+      "sha256_referencia_t0": "4a38b432ac9783b93093665c355bff8dbadc0dc2dcfe4c698e36f5a545f63576"
+    },
+    "202610": {
+      "origem": {
+        "url": "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_202610.zip",
+        "etag": "\"6b050b30-b3d454\"",
+        "last_modified": "Tue, 24 Nov 2026 03:57:36 GMT",
+        "bytes": 11785300,
+        "sha256_zip": "afbbbe610472a29ef4acf2d4baa611631beefffbc8fa73a21c191b9085efa5ea",
+        "obtido_em": "2026-11-24T18:40:44+00:00"
+      },
+      "perfil": {
+        "linhas": 538570,
+        "fundos": 25526,
+        "pares_fundo_subclasse": 25977,
+        "datas": 22,
+        "primeira_data": "2026-10-01",
+        "ultima_data": "2026-10-30",
+        "linhas_sem_subclasse": 516942,
+        "bytes_zip": 11785300,
+        "bytes_csv": 54572835
+      },
+      "linhas_t0": 538570,
+      "sha256_t0": "eecb22285c67f1cbebd98c40ea1d2515b0599f97dec6d7eb15b4a54264ebea5e",
+      "sha256_referencia_t0": "eecb22285c67f1cbebd98c40ea1d2515b0599f97dec6d7eb15b4a54264ebea5e"
+    },
+    "202611": {
+      "origem": {
+        "url": "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS/inf_diario_fi_202611.zip",
+        "etag": "\"6b050ab7-6db427\"",
+        "last_modified": "Tue, 24 Nov 2026 03:55:35 GMT",
+        "bytes": 7189543,
+        "sha256_zip": "1324b13f3b1522351c7a46ab79dba7884affc028ea47458811b72e052e998d7a",
+        "obtido_em": "2026-11-24T18:40:44+00:00"
+      },
+      "perfil": {
+        "linhas": 329155,
+        "fundos": 25326,
+        "pares_fundo_subclasse": 25777,
+        "datas": 15,
+        "primeira_data": "2026-11-02",
+        "ultima_data": "2026-11-23",
+        "linhas_sem_subclasse": 315367,
+        "bytes_zip": 7189543,
+        "bytes_csv": 33327318
+      },
+      "linhas_t0": 329155,
+      "sha256_t0": "9ddcd09d946a8a8b743d0dbf6b252952974ce0799e4a25935b7eaf13c628f961",
+      "sha256_referencia_t0": "9ddcd09d946a8a8b743d0dbf6b252952974ce0799e4a25935b7eaf13c628f961"
+    }
+  },
+  "republicacao": {
+    "competencia": "202610",
+    "sha256_t1": "6f51a47a44c12a7a3ebd77228fe87a8d0e0e05acccf20ec73f709f87e4e9d762",
+    "linhas_t1": 538570,
+    "alteradas": [
+      [
+        "60.762.973/0001-90",
+        "",
+        "2026-10-14"
+      ],
+      [
+        "37.987.887/0001-63",
+        "",
+        "2026-10-29"
+      ],
+      [
+        "10.446.982/0001-01",
+        "",
+        "2026-10-29"
+      ]
+    ],
+    "removida": [
+      "67.657.950/0001-64",
+      "",
+      "2026-10-23"
+    ],
+    "incluida": [
+      "34.246.534/0001-14",
+      "",
+      "2026-10-12"
+    ]
+  },
+  "tempos": [
+    {
+      "carga": "T0",
+      "competencia": "202609",
+      "pipeline_s": 2.82,
+      "validar_s": 1.159,
+      "reconciliar_s": 1.286,
+      "funcao_s": 2.445
+    },
+    {
+      "carga": "T0",
+      "competencia": "202610",
+      "pipeline_s": 2.898,
+      "validar_s": 1.246,
+      "reconciliar_s": 1.265,
+      "funcao_s": 2.511
+    },
+    {
+      "carga": "T0",
+      "competencia": "202611",
+      "pipeline_s": 1.966,
+      "validar_s": 0.854,
+      "reconciliar_s": 0.842,
+      "funcao_s": 1.696
+    },
+    {
+      "carga": "reexecução",
+      "competencia": "202609",
+      "pipeline_s": 2.712,
+      "validar_s": 1.138,
+      "reconciliar_s": 1.205,
+      "funcao_s": 2.343
+    },
+    {
+      "carga": "reexecução",
+      "competencia": "202610",
+      "pipeline_s": 3.062,
+      "validar_s": 1.397,
+      "reconciliar_s": 1.283,
+      "funcao_s": 2.68
+    },
+    {
+      "carga": "reexecução",
+      "competencia": "202611",
+      "pipeline_s": 1.976,
+      "validar_s": 0.843,
+      "reconciliar_s": 0.855,
+      "funcao_s": 1.698
+    },
+    {
+      "carga": "T1",
+      "competencia": "202609",
+      "pipeline_s": 2.838,
+      "validar_s": 1.171,
+      "reconciliar_s": 1.291,
+      "funcao_s": 2.462
+    },
+    {
+      "carga": "T1",
+      "competencia": "202610",
+      "pipeline_s": 2.777,
+      "validar_s": 1.171,
+      "reconciliar_s": 1.217,
+      "funcao_s": 2.388
+    },
+    {
+      "carga": "T1",
+      "competencia": "202611",
+      "pipeline_s": 1.963,
+      "validar_s": 0.841,
+      "reconciliar_s": 0.853,
+      "funcao_s": 1.694
+    }
+  ],
+  "funcao_s_max": 2.68,
+  "checagens": [
+    {
+      "nome": "T0 202609: manifesto aponta a carga",
+      "ok": true,
+      "detalhe": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+    },
+    {
+      "nome": "T0 202609: referência Python = DuckDB",
+      "ok": true,
+      "detalhe": "538758 linhas, 4a38b432ac9783b9… × 538758, 4a38b432ac9783b9…"
+    },
+    {
+      "nome": "T0 202609: staging apagada no fim",
+      "ok": true,
+      "detalhe": "carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+    },
+    {
+      "nome": "T0 202610: manifesto aponta a carga",
+      "ok": true,
+      "detalhe": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+    },
+    {
+      "nome": "T0 202610: referência Python = DuckDB",
+      "ok": true,
+      "detalhe": "538570 linhas, eecb22285c67f1cb… × 538570, eecb22285c67f1cb…"
+    },
+    {
+      "nome": "T0 202610: staging apagada no fim",
+      "ok": true,
+      "detalhe": "carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+    },
+    {
+      "nome": "T0 202611: manifesto aponta a carga",
+      "ok": true,
+      "detalhe": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+    },
+    {
+      "nome": "T0 202611: referência Python = DuckDB",
+      "ok": true,
+      "detalhe": "329155 linhas, 9ddcd09d946a8a8b… × 329155, 9ddcd09d946a8a8b…"
+    },
+    {
+      "nome": "T0 202611: staging apagada no fim",
+      "ok": true,
+      "detalhe": "carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+    },
+    {
+      "nome": "reexecução 202609: mesmo hash e mesma contagem",
+      "ok": true,
+      "detalhe": "538758 linhas, 4a38b432ac9783b9…"
+    },
+    {
+      "nome": "reexecução 202609: ouro idêntico",
+      "ok": true,
+      "detalhe": "7b36d7404ccdf099…"
+    },
+    {
+      "nome": "reexecução 202609: 2 versões na bronze, manifesto na nova",
+      "ok": true,
+      "detalhe": "2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd"
+    },
+    {
+      "nome": "reexecução 202610: mesmo hash e mesma contagem",
+      "ok": true,
+      "detalhe": "538570 linhas, eecb22285c67f1cb…"
+    },
+    {
+      "nome": "reexecução 202610: ouro idêntico",
+      "ok": true,
+      "detalhe": "e8adf64a9e1e1215…"
+    },
+    {
+      "nome": "reexecução 202610: 2 versões na bronze, manifesto na nova",
+      "ok": true,
+      "detalhe": "2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd"
+    },
+    {
+      "nome": "reexecução 202611: mesmo hash e mesma contagem",
+      "ok": true,
+      "detalhe": "329155 linhas, 9ddcd09d946a8a8b…"
+    },
+    {
+      "nome": "reexecução 202611: ouro idêntico",
+      "ok": true,
+      "detalhe": "1e376cc7d4d87251…"
+    },
+    {
+      "nome": "reexecução 202611: 2 versões na bronze, manifesto na nova",
+      "ok": true,
+      "detalhe": "2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd"
+    },
+    {
+      "nome": "T1 202609: mês não republicado ficou igual",
+      "ok": true,
+      "detalhe": "4a38b432ac9783b9…"
+    },
+    {
+      "nome": "T1 202610: prata = T1 (hash calculado à parte)",
+      "ok": true,
+      "detalhe": "538570 linhas, 6f51a47a44c12a7a…"
+    },
+    {
+      "nome": "T1 202610: contagem igual à de T0 e hash diferente",
+      "ok": true,
+      "detalhe": "538570 = 538570; eecb22285c67… ≠ 6f51a47a44c1…"
+    },
+    {
+      "nome": "T1 202610: ouro refeito",
+      "ok": true,
+      "detalhe": "hash do ouro mudou"
+    },
+    {
+      "nome": "T1 202611: mês não republicado ficou igual",
+      "ok": true,
+      "detalhe": "9ddcd09d946a8a8b…"
+    },
+    {
+      "nome": "T1 202610: linha removida ausente da prata",
+      "ok": true,
+      "detalhe": "('67.657.950/0001-64', '', '2026-10-23')"
+    },
+    {
+      "nome": "T1 202610: linha incluída presente na prata",
+      "ok": true,
+      "detalhe": "('34.246.534/0001-14', '', '2026-10-12')"
+    },
+    {
+      "nome": "T1 202610: linha alterada com o valor novo",
+      "ok": true,
+      "detalhe": "('60.762.973/0001-90', '', '2026-10-14'): ('404727237.11', '0.00') → ('404728237.11', '1000.00')"
+    },
+    {
+      "nome": "T1 202610: linha alterada com o valor novo",
+      "ok": true,
+      "detalhe": "('37.987.887/0001-63', '', '2026-10-29'): ('14669207.00', '0.00') → ('14670207.00', '1000.00')"
+    },
+    {
+      "nome": "T1 202610: linha alterada com o valor novo",
+      "ok": true,
+      "detalhe": "('10.446.982/0001-01', '', '2026-10-29'): ('11036873.96', '0.00') → ('11037873.96', '1000.00')"
+    },
+    {
+      "nome": "divergência 202610: a validação falhou pelo hash",
+      "ok": true,
+      "detalhe": "sha256: bronze 6f51a47a44c1… × staging 712c2946ffc8…"
+    },
+    {
+      "nome": "divergência 202610: manifesto continua na carga T1",
+      "ok": true,
+      "detalhe": "a0b2dbe2-937f-468a-a152-da7a1c11f307"
+    },
+    {
+      "nome": "divergência 202610: prata intacta (= T1)",
+      "ok": true,
+      "detalhe": "6f51a47a44c12a7a…"
+    },
+    {
+      "nome": "divergência 202610: staging preservada para diagnóstico",
+      "ok": true,
+      "detalhe": "carga=5d4cdf81-928f-4199-b607-115e77376db9"
+    }
+  ],
+  "ambiente": {
+    "commit": "ea00ad361a6ffc8877b4f90cbaebde061c1b1b84",
+    "codigo_com_alteracao_local": false,
+    "python": "3.12.16",
+    "duckdb": "2.0.1",
+    "sistema": "Linux x86_64"
+  }
+}

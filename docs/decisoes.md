@@ -45,7 +45,10 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   o tipo de data que ela grava no Parquet só se confirma executando.
 - **Decisão:** se o Copy não gravar os tipos do dicionário, a Function escreve a prata com o
   DuckDB (`COPY ... TO 'abfss://...' (FORMAT parquet)`), e o ADF fica com o download e a bronze.
-- **Consequência:** o ADF faz menos e a Function faz mais. A reconciliação não muda.
+- **Consequência:** o ADF faz menos e a Function faz mais. A reconciliação não muda: ela tipa o
+  Parquet pelo dicionário e acusa pelo hash qualquer valor que o tipo físico tenha alterado.
+  Medido no dado real, uma cota gravada como double mudaria em 1.923 linhas de setembro de 2026
+  ([`dado.md`](dado.md#por-que-o-tipo-da-cota-importa)).
 
 ## D3. Janela de reprocessamento no lugar de watermark, com dois gatilhos
 

@@ -18,13 +18,14 @@ duplicar e sem perder linha, e provar isso**.
 |---|---|
 | **O que é** | CVM (ZIP por mês) → ADF (Copy) → ADLS Gen2: bronze (ZIP original, versionado) → prata (Parquet, uma partição por mês, trocada só depois de validada) → ouro (indicadores por fundo e mês, Azure Function com DuckDB) |
 | **Com que dado** | Informe Diário da CVM: ~540 mil linhas por mês, 12 meses na janela. Baixado na execução, nunca versionado ([D1](docs/decisoes.md#d1-dado-público-real-baixado-na-execução-e-nunca-versionado)) |
-| **Garantia** | No desenho, cada carga substitui o mês inteiro, só depois de validá-lo: reexecutar produz o mesmo resultado, e uma linha que a fonte removeu some do destino ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-só-depois-de-validada)). A lógica (substituição, contagem, hash) é provada na máquina com o dado real da CVM; o ADF executando não foi testado |
+| **Garantia** | No desenho, cada carga substitui o mês inteiro, só depois de validá-lo: reexecutar produz o mesmo resultado, e uma linha que a fonte removeu some do destino ([D6](docs/decisoes.md#d6-prata-substituída-por-mês-inteiro-só-depois-de-validada)). A lógica (substituição, contagem, hash) é provada na máquina com o dado real da CVM ([relatório](reports/prova.md)); o ADF executando não foi testado |
 | **Como se prova** | Contagem e SHA-256 canônico por mês, bronze × prata, e uma republicação simulada (T0 → T1) que só pode mudar o mês republicado ([D7](docs/decisoes.md#d7-a-prova-contagem-e-sha-256-canônico-por-mês-e-republicação-simulada)) |
 | **Infra e entrega** | Terraform (dev e prod), identidade gerenciada, Key Vault, GitHub Actions no CI e Azure Pipelines com aprovação de dev para prod |
 | **O que não é** | Não foi aplicado na Azure: é o desenho de referência, com tudo que roda fora da nuvem validado na máquina e o roteiro de implantação em [`docs/runbook.md`](docs/runbook.md) (ver [Limites declarados](#limites-declarados)) |
 
 **Para avaliar em 10 minutos:** [arquitetura](docs/arquitetura.md) →
-[registro de decisões](docs/decisoes.md) → [como se testa](docs/testes.md).
+[registro de decisões](docs/decisoes.md) → [como se testa](docs/testes.md) →
+[relatório da prova](reports/prova.md).
 
 ## Arquitetura
 
@@ -44,10 +45,32 @@ Detalhes, layout do lake, segurança, ambientes e custo estimado: [`docs/arquite
 | Parte | Situação |
 |---|---|
 | Desenho e decisões | pronto |
-| Carga local e prova com o dado da CVM | em construção |
+| Carga local e prova com o dado da CVM | pronto: 32 de 32 checagens com os arquivos reais de set, out e nov/2026 ([relatório](reports/prova.md)) |
 | Terraform | em construção |
 | ADF (JSON) | em construção |
 | CI/CD e runbook | em construção |
+
+## A fonte reescrevendo o passado
+
+Isto aconteceu durante o projeto. Setembro de 2026 tinha 538.663 linhas em 19/11/2026 e 538.758
+em 24/11/2026. A CVM regravou o mês no sábado, 21/11, com 95 linhas a mais. Uma carga que não
+recarregasse setembro ficaria com 95 linhas a menos, sem nenhum erro. Detalhes do dado em
+[`docs/dado.md`](docs/dado.md).
+
+## Como rodar
+
+Precisa de Python 3.12 e [uv](https://docs.astral.sh/uv/).
+
+```bash
+uv sync
+uv run pytest                                   # 35 testes, dado sintético no formato da CVM
+uv run cvm-lake baixar --competencias 202609 202610 202611
+uv run cvm-lake prova --limpar                  # grava reports/prova.md e reports/prova.json
+```
+
+A prova roda sobre um lake vazio em `saida/prova`: carga inicial, reexecução, republicação
+simulada de um mês e uma divergência injetada na staging. Ela termina com código 1 se qualquer
+checagem falhar.
 
 ## Limites declarados
 
