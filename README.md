@@ -1,5 +1,9 @@
 # cvm-azure-data-lake
 
+[![ci](https://github.com/alanjoffre/cvm-azure-data-lake/actions/workflows/ci.yml/badge.svg)](https://github.com/alanjoffre/cvm-azure-data-lake/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-azurerm_4.81-7B42BC?logo=terraform&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-2.0-FFF000)
 [![Licença: MIT](https://img.shields.io/badge/licença-MIT-22c55e)](LICENSE)
 
 Carga incremental com **janela de reprocessamento** (*lookback window*) de uma fonte pública
