@@ -39,6 +39,6 @@ ls "$saida"
 
 echo "== testes do JSON e do ARM"
 cd "$raiz_repo"
-ADF_ARM="$saida" uv run pytest -q tests/test_adf.py
+ADF_ARM="$saida" uv run pytest -q tests/test_adf.py tests/test_deploy.py
 
 echo "ADF validado."

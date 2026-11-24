@@ -1,7 +1,7 @@
 [project]
-name = "adf-adls-medallion-ci"
+name = "cvm-azure-data-lake"
 version = "0.1.0"
-description = "Recarga da janela mutável do Informe Diário da CVM, com contagem e SHA-256 canônico por mês"
+description = "Carga incremental do Informe Diário de fundos da CVM desenhada para a Azure: ADF, ADLS Gen2 (bronze, prata e ouro), Function com DuckDB, Terraform e Azure Pipelines. Reprocessa os meses que a CVM republica sem duplicar nem perder linha: 32/32 checagens com 3 meses reais. Desenho de referência, validado localmente; não aplicado na Azure."
 requires-python = ">=3.12"
 license = "MIT"
 dependencies = ["duckdb>=1.4"]

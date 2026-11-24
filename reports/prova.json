@@ -1,5 +1,5 @@
 {
-  "gerado_em": "2026-11-24T18:45:21+00:00",
+  "gerado_em": "2026-11-24T21:50:00+00:00",
   "ok": true,
   "competencias": [
     "202609",
@@ -8,10 +8,10 @@
   ],
   "republicada": "202610",
   "cargas": {
-    "T0": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9",
-    "reexecucao": "fdd49827-f7b1-4d57-b64e-4e5105f617dd",
-    "T1": "a0b2dbe2-937f-468a-a152-da7a1c11f307",
-    "divergencia": "5d4cdf81-928f-4199-b607-115e77376db9"
+    "T0": "24a73c28-8a17-410e-81e6-edca47032e13",
+    "reexecucao": "9fcbbb91-8a53-4276-8cd3-9256bb33b948",
+    "T1": "5d30790c-1ba3-46b2-9484-917fdde511b4",
+    "divergencia": "c3c2e7de-66a6-4876-959e-5dac4612f4e6"
   },
   "meses": {
     "202609": {
@@ -123,82 +123,82 @@
     {
       "carga": "T0",
       "competencia": "202609",
-      "pipeline_s": 2.82,
-      "validar_s": 1.159,
-      "reconciliar_s": 1.286,
-      "funcao_s": 2.445
-    },
-    {
-      "carga": "T0",
-      "competencia": "202610",
-      "pipeline_s": 2.898,
-      "validar_s": 1.246,
-      "reconciliar_s": 1.265,
+      "pipeline_s": 2.868,
+      "validar_s": 1.256,
+      "reconciliar_s": 1.255,
       "funcao_s": 2.511
     },
     {
       "carga": "T0",
+      "competencia": "202610",
+      "pipeline_s": 2.724,
+      "validar_s": 1.176,
+      "reconciliar_s": 1.2,
+      "funcao_s": 2.376
+    },
+    {
+      "carga": "T0",
       "competencia": "202611",
-      "pipeline_s": 1.966,
-      "validar_s": 0.854,
-      "reconciliar_s": 0.842,
-      "funcao_s": 1.696
+      "pipeline_s": 1.931,
+      "validar_s": 0.8,
+      "reconciliar_s": 0.883,
+      "funcao_s": 1.683
     },
     {
       "carga": "reexecução",
       "competencia": "202609",
-      "pipeline_s": 2.712,
-      "validar_s": 1.138,
-      "reconciliar_s": 1.205,
-      "funcao_s": 2.343
+      "pipeline_s": 2.878,
+      "validar_s": 1.216,
+      "reconciliar_s": 1.31,
+      "funcao_s": 2.526
     },
     {
       "carga": "reexecução",
       "competencia": "202610",
-      "pipeline_s": 3.062,
-      "validar_s": 1.397,
-      "reconciliar_s": 1.283,
-      "funcao_s": 2.68
+      "pipeline_s": 2.811,
+      "validar_s": 1.171,
+      "reconciliar_s": 1.27,
+      "funcao_s": 2.441
     },
     {
       "carga": "reexecução",
       "competencia": "202611",
-      "pipeline_s": 1.976,
-      "validar_s": 0.843,
-      "reconciliar_s": 0.855,
-      "funcao_s": 1.698
+      "pipeline_s": 2.012,
+      "validar_s": 0.879,
+      "reconciliar_s": 0.869,
+      "funcao_s": 1.748
     },
     {
       "carga": "T1",
       "competencia": "202609",
-      "pipeline_s": 2.838,
-      "validar_s": 1.171,
-      "reconciliar_s": 1.291,
-      "funcao_s": 2.462
+      "pipeline_s": 2.776,
+      "validar_s": 1.184,
+      "reconciliar_s": 1.235,
+      "funcao_s": 2.419
     },
     {
       "carga": "T1",
       "competencia": "202610",
-      "pipeline_s": 2.777,
-      "validar_s": 1.171,
-      "reconciliar_s": 1.217,
-      "funcao_s": 2.388
+      "pipeline_s": 2.87,
+      "validar_s": 1.2,
+      "reconciliar_s": 1.28,
+      "funcao_s": 2.48
     },
     {
       "carga": "T1",
       "competencia": "202611",
-      "pipeline_s": 1.963,
-      "validar_s": 0.841,
-      "reconciliar_s": 0.853,
-      "funcao_s": 1.694
+      "pipeline_s": 1.994,
+      "validar_s": 0.819,
+      "reconciliar_s": 0.889,
+      "funcao_s": 1.708
     }
   ],
-  "funcao_s_max": 2.68,
+  "funcao_s_max": 2.526,
   "checagens": [
     {
       "nome": "T0 202609: manifesto aponta a carga",
       "ok": true,
-      "detalhe": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+      "detalhe": "24a73c28-8a17-410e-81e6-edca47032e13"
     },
     {
       "nome": "T0 202609: referência Python = DuckDB",
@@ -208,12 +208,12 @@
     {
       "nome": "T0 202609: staging apagada no fim",
       "ok": true,
-      "detalhe": "carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+      "detalhe": "carga=24a73c28-8a17-410e-81e6-edca47032e13"
     },
     {
       "nome": "T0 202610: manifesto aponta a carga",
       "ok": true,
-      "detalhe": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+      "detalhe": "24a73c28-8a17-410e-81e6-edca47032e13"
     },
     {
       "nome": "T0 202610: referência Python = DuckDB",
@@ -223,12 +223,12 @@
     {
       "nome": "T0 202610: staging apagada no fim",
       "ok": true,
-      "detalhe": "carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+      "detalhe": "carga=24a73c28-8a17-410e-81e6-edca47032e13"
     },
     {
       "nome": "T0 202611: manifesto aponta a carga",
       "ok": true,
-      "detalhe": "4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+      "detalhe": "24a73c28-8a17-410e-81e6-edca47032e13"
     },
     {
       "nome": "T0 202611: referência Python = DuckDB",
@@ -238,7 +238,7 @@
     {
       "nome": "T0 202611: staging apagada no fim",
       "ok": true,
-      "detalhe": "carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9"
+      "detalhe": "carga=24a73c28-8a17-410e-81e6-edca47032e13"
     },
     {
       "nome": "reexecução 202609: mesmo hash e mesma contagem",
@@ -253,7 +253,7 @@
     {
       "nome": "reexecução 202609: 2 versões na bronze, manifesto na nova",
       "ok": true,
-      "detalhe": "2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd"
+      "detalhe": "2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948"
     },
     {
       "nome": "reexecução 202610: mesmo hash e mesma contagem",
@@ -268,7 +268,7 @@
     {
       "nome": "reexecução 202610: 2 versões na bronze, manifesto na nova",
       "ok": true,
-      "detalhe": "2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd"
+      "detalhe": "2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948"
     },
     {
       "nome": "reexecução 202611: mesmo hash e mesma contagem",
@@ -283,7 +283,7 @@
     {
       "nome": "reexecução 202611: 2 versões na bronze, manifesto na nova",
       "ok": true,
-      "detalhe": "2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd"
+      "detalhe": "2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948"
     },
     {
       "nome": "T1 202609: mês não republicado ficou igual",
@@ -343,7 +343,7 @@
     {
       "nome": "divergência 202610: manifesto continua na carga T1",
       "ok": true,
-      "detalhe": "a0b2dbe2-937f-468a-a152-da7a1c11f307"
+      "detalhe": "5d30790c-1ba3-46b2-9484-917fdde511b4"
     },
     {
       "nome": "divergência 202610: prata intacta (= T1)",
@@ -353,11 +353,11 @@
     {
       "nome": "divergência 202610: staging preservada para diagnóstico",
       "ok": true,
-      "detalhe": "carga=5d4cdf81-928f-4199-b607-115e77376db9"
+      "detalhe": "carga=c3c2e7de-66a6-4876-959e-5dac4612f4e6"
     }
   ],
   "ambiente": {
-    "commit": "ea00ad361a6ffc8877b4f90cbaebde061c1b1b84",
+    "commit": "44d87b258fb0dec060f85699a2bb48abc3f96bc0",
     "codigo_com_alteracao_local": false,
     "python": "3.12.16",
     "duckdb": "2.0.1",

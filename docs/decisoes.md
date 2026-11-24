@@ -164,7 +164,7 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   lake, ADF, Function (com o armazenamento do host), Key Vault, alerta e orçamento. O estado remoto
   fica num container à parte, criado no passo 1 do runbook.
 - **Bootstrap separado:** o que a identidade do pipeline não pode criar sozinha fica em
-  [`infra/bootstrap/`](../infra/bootstrap/), aplicado uma vez por quem tem Owner na assinatura:
+  [`infra/bootstrap/`](../infra/bootstrap/), a ser aplicado uma vez por quem tem Owner na assinatura:
   a conta do estado, os resource groups de dev e prod e as permissões do pipeline. Assim o
   pipeline recebe `Contributor` só dentro de cada resource group, e não na assinatura.
 - **Consequência:** `terraform destroy` encerra tudo, o que importa para não deixar custo

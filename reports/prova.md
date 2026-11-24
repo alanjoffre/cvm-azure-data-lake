@@ -1,9 +1,9 @@
 # Relatório da prova local
 
-Gerado por `uv run cvm-lake prova` em 2026-11-24T18:45:21+00:00. Este relatório mede o substituto local (DuckDB e pastas). Nada foi aplicado na Azure.
+Gerado por `uv run cvm-lake prova` em 2026-11-24T21:50:00+00:00. Este relatório mede o substituto local (DuckDB e pastas). Nada foi aplicado na Azure.
 
 - Resultado: **passou** (32 de 32 checagens)
-- Código: commit `ea00ad361a6f`
+- Código: commit `44d87b258fb0`
 - Ambiente: Python 3.12.16, DuckDB 2.0.1, Linux x86_64
 - Mês republicado na simulação: 202610
 
@@ -29,24 +29,24 @@ T1 de 202610: 3 linhas alteradas (+1.000,00 em `VL_PATRIM_LIQ` e `CAPTC_DIA`), 1
 
 | | Checagem | Detalhe |
 |---|---|---|
-| ok | T0 202609: manifesto aponta a carga | 4e0c0a87-fb7d-4ede-bf90-a0436525b8b9 |
+| ok | T0 202609: manifesto aponta a carga | 24a73c28-8a17-410e-81e6-edca47032e13 |
 | ok | T0 202609: referência Python = DuckDB | 538758 linhas, 4a38b432ac9783b9… × 538758, 4a38b432ac9783b9… |
-| ok | T0 202609: staging apagada no fim | carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9 |
-| ok | T0 202610: manifesto aponta a carga | 4e0c0a87-fb7d-4ede-bf90-a0436525b8b9 |
+| ok | T0 202609: staging apagada no fim | carga=24a73c28-8a17-410e-81e6-edca47032e13 |
+| ok | T0 202610: manifesto aponta a carga | 24a73c28-8a17-410e-81e6-edca47032e13 |
 | ok | T0 202610: referência Python = DuckDB | 538570 linhas, eecb22285c67f1cb… × 538570, eecb22285c67f1cb… |
-| ok | T0 202610: staging apagada no fim | carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9 |
-| ok | T0 202611: manifesto aponta a carga | 4e0c0a87-fb7d-4ede-bf90-a0436525b8b9 |
+| ok | T0 202610: staging apagada no fim | carga=24a73c28-8a17-410e-81e6-edca47032e13 |
+| ok | T0 202611: manifesto aponta a carga | 24a73c28-8a17-410e-81e6-edca47032e13 |
 | ok | T0 202611: referência Python = DuckDB | 329155 linhas, 9ddcd09d946a8a8b… × 329155, 9ddcd09d946a8a8b… |
-| ok | T0 202611: staging apagada no fim | carga=4e0c0a87-fb7d-4ede-bf90-a0436525b8b9 |
+| ok | T0 202611: staging apagada no fim | carga=24a73c28-8a17-410e-81e6-edca47032e13 |
 | ok | reexecução 202609: mesmo hash e mesma contagem | 538758 linhas, 4a38b432ac9783b9… |
 | ok | reexecução 202609: ouro idêntico | 7b36d7404ccdf099… |
-| ok | reexecução 202609: 2 versões na bronze, manifesto na nova | 2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd |
+| ok | reexecução 202609: 2 versões na bronze, manifesto na nova | 2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948 |
 | ok | reexecução 202610: mesmo hash e mesma contagem | 538570 linhas, eecb22285c67f1cb… |
 | ok | reexecução 202610: ouro idêntico | e8adf64a9e1e1215… |
-| ok | reexecução 202610: 2 versões na bronze, manifesto na nova | 2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd |
+| ok | reexecução 202610: 2 versões na bronze, manifesto na nova | 2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948 |
 | ok | reexecução 202611: mesmo hash e mesma contagem | 329155 linhas, 9ddcd09d946a8a8b… |
 | ok | reexecução 202611: ouro idêntico | 1e376cc7d4d87251… |
-| ok | reexecução 202611: 2 versões na bronze, manifesto na nova | 2 versões; vigente fdd49827-f7b1-4d57-b64e-4e5105f617dd |
+| ok | reexecução 202611: 2 versões na bronze, manifesto na nova | 2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948 |
 | ok | T1 202609: mês não republicado ficou igual | 4a38b432ac9783b9… |
 | ok | T1 202610: prata = T1 (hash calculado à parte) | 538570 linhas, 6f51a47a44c12a7a… |
 | ok | T1 202610: contagem igual à de T0 e hash diferente | 538570 = 538570; eecb22285c67… ≠ 6f51a47a44c1… |
@@ -58,9 +58,9 @@ T1 de 202610: 3 linhas alteradas (+1.000,00 em `VL_PATRIM_LIQ` e `CAPTC_DIA`), 1
 | ok | T1 202610: linha alterada com o valor novo | ('37.987.887/0001-63', '', '2026-10-29'): ('14669207.00', '0.00') → ('14670207.00', '1000.00') |
 | ok | T1 202610: linha alterada com o valor novo | ('10.446.982/0001-01', '', '2026-10-29'): ('11036873.96', '0.00') → ('11037873.96', '1000.00') |
 | ok | divergência 202610: a validação falhou pelo hash | sha256: bronze 6f51a47a44c1… × staging 712c2946ffc8… |
-| ok | divergência 202610: manifesto continua na carga T1 | a0b2dbe2-937f-468a-a152-da7a1c11f307 |
+| ok | divergência 202610: manifesto continua na carga T1 | 5d30790c-1ba3-46b2-9484-917fdde511b4 |
 | ok | divergência 202610: prata intacta (= T1) | 6f51a47a44c12a7a… |
-| ok | divergência 202610: staging preservada para diagnóstico | carga=5d4cdf81-928f-4199-b607-115e77376db9 |
+| ok | divergência 202610: staging preservada para diagnóstico | carga=c3c2e7de-66a6-4876-959e-5dac4612f4e6 |
 
 ## Tempos por mês
 
@@ -68,14 +68,14 @@ T1 de 202610: 3 linhas alteradas (+1.000,00 em `VL_PATRIM_LIQ` e `CAPTC_DIA`), 1
 
 | Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Função (s) |
 |---|---|---:|---:|---:|---:|
-| T0 | 202609 | 2.82 | 1.159 | 1.286 | 2.445 |
-| T0 | 202610 | 2.898 | 1.246 | 1.265 | 2.511 |
-| T0 | 202611 | 1.966 | 0.854 | 0.842 | 1.696 |
-| reexecução | 202609 | 2.712 | 1.138 | 1.205 | 2.343 |
-| reexecução | 202610 | 3.062 | 1.397 | 1.283 | 2.68 |
-| reexecução | 202611 | 1.976 | 0.843 | 0.855 | 1.698 |
-| T1 | 202609 | 2.838 | 1.171 | 1.291 | 2.462 |
-| T1 | 202610 | 2.777 | 1.171 | 1.217 | 2.388 |
-| T1 | 202611 | 1.963 | 0.841 | 0.853 | 1.694 |
+| T0 | 202609 | 2.868 | 1.256 | 1.255 | 2.511 |
+| T0 | 202610 | 2.724 | 1.176 | 1.2 | 2.376 |
+| T0 | 202611 | 1.931 | 0.8 | 0.883 | 1.683 |
+| reexecução | 202609 | 2.878 | 1.216 | 1.31 | 2.526 |
+| reexecução | 202610 | 2.811 | 1.171 | 1.27 | 2.441 |
+| reexecução | 202611 | 2.012 | 0.879 | 0.869 | 1.748 |
+| T1 | 202609 | 2.776 | 1.184 | 1.235 | 2.419 |
+| T1 | 202610 | 2.87 | 1.2 | 1.28 | 2.48 |
+| T1 | 202611 | 1.994 | 0.819 | 0.889 | 1.708 |
 
-Maior tempo de função: 2.68 s (teto 230 s).
+Maior tempo de função: 2.526 s (teto 230 s).

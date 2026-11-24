@@ -22,12 +22,13 @@ pipeline ([`azure-pipelines.yml`](../azure-pipelines.yml)).
 
 ## 0. Antes de começar: travas de custo
 
-- Conta gratuita da Azure com o limite de gastos (*spending limit*) **ligado**. Não converter
-  para pagamento por uso durante o teste.
+- Assinatura com limite de gastos (*spending limit*) **ligado**, onde o tipo de assinatura o
+  oferece (conta gratuita, crédito do Visual Studio). Pagamento por uso não tem esse limite: aí a
+  trava é o orçamento abaixo e a data do passo 12.
 - Orçamento (*budget*) com aviso por e-mail. O orçamento só avisa, e com atraso de horas, então
   não substitui o limite de gastos. O Terraform cria um por ambiente (`orcamento_mensal` em
   `infra/ambientes/*.tfvars`).
-- Data marcada para o passo 12, antes do fim do crédito.
+- Data marcada para o passo 12 (destroy).
 - Não criar Data Flow, VNet gerenciada, endpoint privado nem Log Analytics.
 - O agente do pipeline roda numa máquina Linux própria (passo 3), não numa VM da Azure.
 
@@ -155,7 +156,7 @@ cliente: o Azure DevOps emite um token, e o Entra ID o troca pelo token da Azure
 | `TF_ESTADO_RG` | `resource_group_name` de `backend_config` (passo 1) | não |
 | `TF_ESTADO_CONTA` | `storage_account_name` de `backend_config` | não |
 | `TF_ESTADO_CONTAINER` | `container_name` de `backend_config` | não |
-| `EMAILS_ALERTA` | a lista de e-mails do alerta, em HCL: `["alerta@exemplo.com"]` | **sim** |
+| `EMAILS_ALERTA` | a lista de e-mails do alerta, em HCL: `["alerta@example.com"]` | **sim** |
 
 A variável secreta só chega ao script mapeada no `env` da task (o `TF_VAR_emails_alerta` do
 [`deploy.yml`](../ci/azure/deploy.yml)). Em *Pipeline permissions* do grupo, liberar só este
@@ -210,7 +211,7 @@ terraform -chdir=infra init \
   -backend-config="storage_account_name=<TF_ESTADO_CONTA>" \
   -backend-config="container_name=<TF_ESTADO_CONTAINER>" \
   -backend-config="key=dev.tfstate"
-TF_VAR_emails_alerta='["alerta@exemplo.com"]' \
+TF_VAR_emails_alerta='["alerta@example.com"]' \
   terraform -chdir=infra plan -var-file=ambientes/dev.tfvars
 ```
 
@@ -321,7 +322,7 @@ az role assignment create --assignee "$(az ad signed-in-user show --query id -o 
   --role "Storage Blob Data Contributor" \
   --scope "$(az storage account show -n <TF_ESTADO_CONTA> -g <TF_ESTADO_RG> --query id -o tsv)"
 
-export TF_VAR_emails_alerta='["alerta@exemplo.com"]'
+export TF_VAR_emails_alerta='["alerta@example.com"]'
 # init com key=prod.tfstate (passo 6)
 terraform -chdir=infra plan -destroy -var-file=ambientes/prod.tfvars -out=destroy.tfplan
 terraform -chdir=infra apply destroy.tfplan

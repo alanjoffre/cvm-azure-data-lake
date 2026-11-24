@@ -18,7 +18,7 @@ from cvm_lake.lake import conferir_competencia
 
 URL_BASE_CVM = "https://dados.cvm.gov.br/dados/FI/DOC/INF_DIARIO/DADOS"
 # Identificação genérica do cliente, sem dado pessoal.
-USER_AGENT = "adf-adls-medallion-ci/0.1"
+USER_AGENT = "cvm-azure-data-lake/0.1"
 
 
 def nome_arquivo(competencia: str) -> str:

@@ -16,7 +16,7 @@ confirma fica listado à parte.
 | ADF (JSON) | [`ci/adf/validar.sh`](../ci/adf/validar.sh): `@microsoft/azure-data-factory-utilities` (validate + export do ARM) e [`tests/test_adf.py`](../tests/test_adf.py) (31 testes: referências, `dependsOn` que o validador não confere, caminhos iguais aos do código, contrato com a Function, meses dos gatilhos contra a janela, parâmetros do ARM) | o JSON é válido (esquema e referências), gera o ARM e faz o que o código local faz; não prova a execução ([`adf.md`](adf.md#validar)) |
 | ARM gerado | [`ci/adf/armttk.sh`](../ci/adf/armttk.sh): arm-ttk fixado pelo commit da release, com PowerShell 7, sobre o ARM que o `ci/adf/validar.sh` exporta. Dois testes pulados, com o motivo no script: reprovam o que o gerador da Microsoft escreve (`$schema` com `http://` e propriedades vazias) | boas práticas do template |
 | Azure Pipelines (YAML) | `check-jsonschema` com o esquema publicado do Azure Pipelines, nos dois arquivos; os scripts das etapas rodam nos testes e no shellcheck | a estrutura do arquivo e os nomes das tasks e das entradas; variáveis, templates e checks só se resolvem no Azure DevOps |
-| Tudo | [GitHub Actions](../.github/workflows/ci.yml) a cada push e pull request, sem credencial: Python, Terraform, ADF com arm-ttk, YAML e shellcheck | selo verde |
+| Tudo | [GitHub Actions](../.github/workflows/ci.yml) a cada push e pull request, sem credencial: Python, Terraform, ADF com arm-ttk, YAML e shellcheck | o selo público do CI (o deploy fica no Azure Pipelines) |
 
 ## O que a prova da tese cobra
 
