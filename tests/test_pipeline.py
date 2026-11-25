@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -138,6 +139,9 @@ def test_cli_prova_grava_o_relatorio(snapshot: Path, tmp_path: Path) -> None:
     assert relatorio["ok"] is True and relatorio["competencias"] == COMPETENCIAS
     texto = (tmp_path / "r" / "prova.md").read_text()
     assert "Nada foi aplicado na Azure" in texto and "FALHOU" not in texto
+    # Tempo com vírgula decimal: "2.53 s" seria lido como 2.530 segundos num texto em pt-BR.
+    maior = re.search(r"Maior tempo da Function: (\S+) s", texto)
+    assert maior and re.fullmatch(r"\d+,\d{2}", maior.group(1))
 
 
 def test_linha_de_outro_mes_no_arquivo_derruba_o_mes(

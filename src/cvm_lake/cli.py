@@ -53,6 +53,11 @@ def _mil(n: int) -> str:
     return f"{n:,}".replace(",", ".")
 
 
+def _seg(s: float) -> str:
+    """Segundos com vírgula decimal: no texto em pt-BR, o ponto é o separador de milhar."""
+    return f"{s:.2f}".replace(".", ",")
+
+
 def para_markdown(r: dict[str, Any]) -> str:
     amb = r["ambiente"]
     ok = sum(c["ok"] for c in r["checagens"])
@@ -114,10 +119,11 @@ def para_markdown(r: dict[str, Any]) -> str:
         "|---|---|---:|---:|---:|---:|",
     ]
     for t in r["tempos"]:
-        linhas.append(f"| {t['carga']} | {t['competencia']} | {t['pipeline_s']} | "
-                      f"{t['validar_s']} | {t['reconciliar_s']} | {t['funcao_s']} |")
-    linhas += ["", f"Maior tempo de função: {r['funcao_s_max']} s (teto {LIMITE_FUNCAO_S} s).",
-               ""]
+        linhas.append(f"| {t['carga']} | {t['competencia']} | {_seg(t['pipeline_s'])} | "
+                      f"{_seg(t['validar_s'])} | {_seg(t['reconciliar_s'])} | "
+                      f"{_seg(t['funcao_s'])} |")
+    linhas += ["", f"Maior tempo da Function: {_seg(r['funcao_s_max'])} s "
+               f"(limite do ADF: {LIMITE_FUNCAO_S} s).", ""]
     return "\n".join(linhas)
 
 

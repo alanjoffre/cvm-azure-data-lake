@@ -8,7 +8,8 @@
 
 Carga incremental com **janela de reprocessamento** (*lookback window*) de uma fonte pública
 que **reescreve o próprio passado**, com Azure Data Factory, ADLS Gen2 em arquitetura medalhão
-(bronze, prata e ouro), Azure Function com DuckDB, Terraform e CI/CD no Azure Pipelines.
+(bronze, prata e ouro), Azure Function com DuckDB, Terraform e CI/CD escrito para o Azure Pipelines
+(YAML conferido contra o esquema).
 
 A fonte é o Informe Diário de fundos de investimento da CVM. Todo dia ela regrava o mês corrente
 e o anterior, e toda semana os dez meses antes deles. Carregar só o mês novo deixa o lake errado
