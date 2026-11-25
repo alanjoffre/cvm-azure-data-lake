@@ -1,9 +1,9 @@
 # Relatório da prova local
 
-Gerado por `uv run cvm-lake prova` em 2026-11-24T21:50:00+00:00. Este relatório mede o substituto local (DuckDB e pastas). Nada foi aplicado na Azure.
+Gerado por `uv run cvm-lake prova` em 2026-11-25T09:52:39+00:00. Este relatório mede o substituto local (DuckDB e pastas). Nada foi aplicado na Azure.
 
 - Resultado: **passou** (32 de 32 checagens)
-- Código: commit `44d87b258fb0`
+- Código: commit `dec3a555307c`
 - Ambiente: Python 3.12.16, DuckDB 2.0.1, Linux x86_64
 - Mês republicado na simulação: 202610
 
@@ -23,33 +23,33 @@ SHA-256 canônico de cada mês em T0 (DuckDB e referência Python):
 
 ## Republicação simulada
 
-T1 de 202610: 3 linhas alteradas (+1.000,00 em `VL_PATRIM_LIQ` e `CAPTC_DIA`), 1 removida e 1 incluída. Mesma contagem de T0 (538.570), hash `6f51a47a44c12a7a…`.
+T1 de 202610: 3 linhas alteradas (+1.000,00 em `VL_PATRIM_LIQ` e `CAPTC_DIA`), 1 removida e 1 incluída. A mesma contagem de T0 (538.570), hash `6f51a47a44c12a7a…`.
 
 ## Checagens
 
 | | Checagem | Detalhe |
 |---|---|---|
-| ok | T0 202609: manifesto aponta a carga | 24a73c28-8a17-410e-81e6-edca47032e13 |
-| ok | T0 202609: referência Python = DuckDB | 538758 linhas, 4a38b432ac9783b9… × 538758, 4a38b432ac9783b9… |
-| ok | T0 202609: staging apagada no fim | carga=24a73c28-8a17-410e-81e6-edca47032e13 |
-| ok | T0 202610: manifesto aponta a carga | 24a73c28-8a17-410e-81e6-edca47032e13 |
-| ok | T0 202610: referência Python = DuckDB | 538570 linhas, eecb22285c67f1cb… × 538570, eecb22285c67f1cb… |
-| ok | T0 202610: staging apagada no fim | carga=24a73c28-8a17-410e-81e6-edca47032e13 |
-| ok | T0 202611: manifesto aponta a carga | 24a73c28-8a17-410e-81e6-edca47032e13 |
-| ok | T0 202611: referência Python = DuckDB | 329155 linhas, 9ddcd09d946a8a8b… × 329155, 9ddcd09d946a8a8b… |
-| ok | T0 202611: staging apagada no fim | carga=24a73c28-8a17-410e-81e6-edca47032e13 |
-| ok | reexecução 202609: mesmo hash e mesma contagem | 538758 linhas, 4a38b432ac9783b9… |
+| ok | T0 202609: manifesto aponta a carga | a552dc01-ec65-4729-8299-fceea5e40990 |
+| ok | T0 202609: referência Python = DuckDB | 538.758 linhas, 4a38b432ac9783b9… × 538.758, 4a38b432ac9783b9… |
+| ok | T0 202609: staging apagada no fim | carga=a552dc01-ec65-4729-8299-fceea5e40990 |
+| ok | T0 202610: manifesto aponta a carga | a552dc01-ec65-4729-8299-fceea5e40990 |
+| ok | T0 202610: referência Python = DuckDB | 538.570 linhas, eecb22285c67f1cb… × 538.570, eecb22285c67f1cb… |
+| ok | T0 202610: staging apagada no fim | carga=a552dc01-ec65-4729-8299-fceea5e40990 |
+| ok | T0 202611: manifesto aponta a carga | a552dc01-ec65-4729-8299-fceea5e40990 |
+| ok | T0 202611: referência Python = DuckDB | 329.155 linhas, 9ddcd09d946a8a8b… × 329.155, 9ddcd09d946a8a8b… |
+| ok | T0 202611: staging apagada no fim | carga=a552dc01-ec65-4729-8299-fceea5e40990 |
+| ok | reexecução 202609: mesmo hash e mesma contagem | 538.758 linhas, 4a38b432ac9783b9… |
 | ok | reexecução 202609: ouro idêntico | 7b36d7404ccdf099… |
-| ok | reexecução 202609: 2 versões na bronze, manifesto na nova | 2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948 |
-| ok | reexecução 202610: mesmo hash e mesma contagem | 538570 linhas, eecb22285c67f1cb… |
+| ok | reexecução 202609: 2 versões na bronze, manifesto na nova | 2 versões; vigente c2dfc491-5630-4b7d-96ea-243b795cf2f5 |
+| ok | reexecução 202610: mesmo hash e mesma contagem | 538.570 linhas, eecb22285c67f1cb… |
 | ok | reexecução 202610: ouro idêntico | e8adf64a9e1e1215… |
-| ok | reexecução 202610: 2 versões na bronze, manifesto na nova | 2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948 |
-| ok | reexecução 202611: mesmo hash e mesma contagem | 329155 linhas, 9ddcd09d946a8a8b… |
+| ok | reexecução 202610: 2 versões na bronze, manifesto na nova | 2 versões; vigente c2dfc491-5630-4b7d-96ea-243b795cf2f5 |
+| ok | reexecução 202611: mesmo hash e mesma contagem | 329.155 linhas, 9ddcd09d946a8a8b… |
 | ok | reexecução 202611: ouro idêntico | 1e376cc7d4d87251… |
-| ok | reexecução 202611: 2 versões na bronze, manifesto na nova | 2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948 |
+| ok | reexecução 202611: 2 versões na bronze, manifesto na nova | 2 versões; vigente c2dfc491-5630-4b7d-96ea-243b795cf2f5 |
 | ok | T1 202609: mês não republicado ficou igual | 4a38b432ac9783b9… |
-| ok | T1 202610: prata = T1 (hash calculado à parte) | 538570 linhas, 6f51a47a44c12a7a… |
-| ok | T1 202610: contagem igual à de T0 e hash diferente | 538570 = 538570; eecb22285c67… ≠ 6f51a47a44c1… |
+| ok | T1 202610: prata = T1 (hash calculado à parte) | 538.570 linhas, 6f51a47a44c12a7a… |
+| ok | T1 202610: contagem igual à de T0 e hash diferente | 538.570 = 538.570; eecb22285c67… ≠ 6f51a47a44c1… |
 | ok | T1 202610: ouro refeito | hash do ouro mudou |
 | ok | T1 202611: mês não republicado ficou igual | 9ddcd09d946a8a8b… |
 | ok | T1 202610: linha removida ausente da prata | ('67.657.950/0001-64', '', '2026-10-23') |
@@ -58,24 +58,24 @@ T1 de 202610: 3 linhas alteradas (+1.000,00 em `VL_PATRIM_LIQ` e `CAPTC_DIA`), 1
 | ok | T1 202610: linha alterada com o valor novo | ('37.987.887/0001-63', '', '2026-10-29'): ('14669207.00', '0.00') → ('14670207.00', '1000.00') |
 | ok | T1 202610: linha alterada com o valor novo | ('10.446.982/0001-01', '', '2026-10-29'): ('11036873.96', '0.00') → ('11037873.96', '1000.00') |
 | ok | divergência 202610: a validação falhou pelo hash | sha256: bronze 6f51a47a44c1… × staging 712c2946ffc8… |
-| ok | divergência 202610: manifesto continua na carga T1 | 5d30790c-1ba3-46b2-9484-917fdde511b4 |
+| ok | divergência 202610: manifesto continua na carga T1 | b9d592ed-fee3-4027-ad33-d32fef12a733 |
 | ok | divergência 202610: prata intacta (= T1) | 6f51a47a44c12a7a… |
-| ok | divergência 202610: staging preservada para diagnóstico | carga=c3c2e7de-66a6-4876-959e-5dac4612f4e6 |
+| ok | divergência 202610: staging preservada para diagnóstico | carga=dad1d492-dda4-4dfe-9dc5-9a15cca04200 |
 
 ## Tempos por mês
 
-`funcao_s` = validar + reconciliar, o trabalho que a Function fará. Medido nesta máquina, não na Azure: a folga contra os 230 s que o ADF espera pela resposta da Function se confirma na execução na Azure.
+Function (s) = validar + reconciliar, as duas chamadas que o ADF fará à Function. Medido nesta máquina, não na Azure: a folga contra os 230 s que uma Function por HTTP tem para responder só se confirma executando na Azure.
 
-| Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Função (s) |
+| Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Function (s) |
 |---|---|---:|---:|---:|---:|
-| T0 | 202609 | 2,87 | 1,26 | 1,25 | 2,51 |
-| T0 | 202610 | 2,72 | 1,18 | 1,20 | 2,38 |
-| T0 | 202611 | 1,93 | 0,80 | 0,88 | 1,68 |
-| reexecução | 202609 | 2,88 | 1,22 | 1,31 | 2,53 |
-| reexecução | 202610 | 2,81 | 1,17 | 1,27 | 2,44 |
-| reexecução | 202611 | 2,01 | 0,88 | 0,87 | 1,75 |
-| T1 | 202609 | 2,78 | 1,18 | 1,24 | 2,42 |
-| T1 | 202610 | 2,87 | 1,20 | 1,28 | 2,48 |
-| T1 | 202611 | 1,99 | 0,82 | 0,89 | 1,71 |
+| T0 | 202609 | 2,77 | 1,19 | 1,25 | 2,44 |
+| T0 | 202610 | 2,79 | 1,21 | 1,23 | 2,44 |
+| T0 | 202611 | 1,92 | 0,83 | 0,86 | 1,69 |
+| reexecução | 202609 | 2,79 | 1,22 | 1,23 | 2,45 |
+| reexecução | 202610 | 2,81 | 1,18 | 1,29 | 2,47 |
+| reexecução | 202611 | 1,96 | 0,86 | 0,87 | 1,73 |
+| T1 | 202609 | 2,88 | 1,22 | 1,33 | 2,55 |
+| T1 | 202610 | 2,82 | 1,19 | 1,27 | 2,46 |
+| T1 | 202611 | 1,98 | 0,83 | 0,92 | 1,75 |
 
-Maior tempo da Function: 2,53 s (limite do ADF: 230 s).
+Maior tempo da Function (as duas chamadas somadas): 2,55 s. Cada chamada HTTP tem até 230 s para responder.

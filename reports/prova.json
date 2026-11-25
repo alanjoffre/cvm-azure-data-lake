@@ -1,5 +1,5 @@
 {
-  "gerado_em": "2026-11-24T21:50:00+00:00",
+  "gerado_em": "2026-11-25T09:52:39+00:00",
   "ok": true,
   "competencias": [
     "202609",
@@ -8,10 +8,10 @@
   ],
   "republicada": "202610",
   "cargas": {
-    "T0": "24a73c28-8a17-410e-81e6-edca47032e13",
-    "reexecucao": "9fcbbb91-8a53-4276-8cd3-9256bb33b948",
-    "T1": "5d30790c-1ba3-46b2-9484-917fdde511b4",
-    "divergencia": "c3c2e7de-66a6-4876-959e-5dac4612f4e6"
+    "T0": "a552dc01-ec65-4729-8299-fceea5e40990",
+    "reexecucao": "c2dfc491-5630-4b7d-96ea-243b795cf2f5",
+    "T1": "b9d592ed-fee3-4027-ad33-d32fef12a733",
+    "divergencia": "dad1d492-dda4-4dfe-9dc5-9a15cca04200"
   },
   "meses": {
     "202609": {
@@ -123,127 +123,127 @@
     {
       "carga": "T0",
       "competencia": "202609",
-      "pipeline_s": 2.868,
-      "validar_s": 1.256,
-      "reconciliar_s": 1.255,
-      "funcao_s": 2.511
+      "pipeline_s": 2.766,
+      "validar_s": 1.19,
+      "reconciliar_s": 1.254,
+      "funcao_s": 2.444
     },
     {
       "carga": "T0",
       "competencia": "202610",
-      "pipeline_s": 2.724,
-      "validar_s": 1.176,
-      "reconciliar_s": 1.2,
-      "funcao_s": 2.376
+      "pipeline_s": 2.793,
+      "validar_s": 1.21,
+      "reconciliar_s": 1.225,
+      "funcao_s": 2.435
     },
     {
       "carga": "T0",
       "competencia": "202611",
-      "pipeline_s": 1.931,
-      "validar_s": 0.8,
-      "reconciliar_s": 0.883,
-      "funcao_s": 1.683
+      "pipeline_s": 1.921,
+      "validar_s": 0.826,
+      "reconciliar_s": 0.864,
+      "funcao_s": 1.69
     },
     {
       "carga": "reexecução",
       "competencia": "202609",
-      "pipeline_s": 2.878,
-      "validar_s": 1.216,
-      "reconciliar_s": 1.31,
-      "funcao_s": 2.526
+      "pipeline_s": 2.795,
+      "validar_s": 1.224,
+      "reconciliar_s": 1.228,
+      "funcao_s": 2.452
     },
     {
       "carga": "reexecução",
       "competencia": "202610",
-      "pipeline_s": 2.811,
-      "validar_s": 1.171,
+      "pipeline_s": 2.813,
+      "validar_s": 1.18,
+      "reconciliar_s": 1.292,
+      "funcao_s": 2.472
+    },
+    {
+      "carga": "reexecução",
+      "competencia": "202611",
+      "pipeline_s": 1.963,
+      "validar_s": 0.857,
+      "reconciliar_s": 0.868,
+      "funcao_s": 1.725
+    },
+    {
+      "carga": "T1",
+      "competencia": "202609",
+      "pipeline_s": 2.879,
+      "validar_s": 1.219,
+      "reconciliar_s": 1.333,
+      "funcao_s": 2.552
+    },
+    {
+      "carga": "T1",
+      "competencia": "202610",
+      "pipeline_s": 2.82,
+      "validar_s": 1.188,
       "reconciliar_s": 1.27,
-      "funcao_s": 2.441
-    },
-    {
-      "carga": "reexecução",
-      "competencia": "202611",
-      "pipeline_s": 2.012,
-      "validar_s": 0.879,
-      "reconciliar_s": 0.869,
-      "funcao_s": 1.748
-    },
-    {
-      "carga": "T1",
-      "competencia": "202609",
-      "pipeline_s": 2.776,
-      "validar_s": 1.184,
-      "reconciliar_s": 1.235,
-      "funcao_s": 2.419
-    },
-    {
-      "carga": "T1",
-      "competencia": "202610",
-      "pipeline_s": 2.87,
-      "validar_s": 1.2,
-      "reconciliar_s": 1.28,
-      "funcao_s": 2.48
+      "funcao_s": 2.458
     },
     {
       "carga": "T1",
       "competencia": "202611",
-      "pipeline_s": 1.994,
-      "validar_s": 0.819,
-      "reconciliar_s": 0.889,
-      "funcao_s": 1.708
+      "pipeline_s": 1.983,
+      "validar_s": 0.83,
+      "reconciliar_s": 0.921,
+      "funcao_s": 1.751
     }
   ],
-  "funcao_s_max": 2.526,
+  "funcao_s_max": 2.552,
   "checagens": [
     {
       "nome": "T0 202609: manifesto aponta a carga",
       "ok": true,
-      "detalhe": "24a73c28-8a17-410e-81e6-edca47032e13"
+      "detalhe": "a552dc01-ec65-4729-8299-fceea5e40990"
     },
     {
       "nome": "T0 202609: referência Python = DuckDB",
       "ok": true,
-      "detalhe": "538758 linhas, 4a38b432ac9783b9… × 538758, 4a38b432ac9783b9…"
+      "detalhe": "538.758 linhas, 4a38b432ac9783b9… × 538.758, 4a38b432ac9783b9…"
     },
     {
       "nome": "T0 202609: staging apagada no fim",
       "ok": true,
-      "detalhe": "carga=24a73c28-8a17-410e-81e6-edca47032e13"
+      "detalhe": "carga=a552dc01-ec65-4729-8299-fceea5e40990"
     },
     {
       "nome": "T0 202610: manifesto aponta a carga",
       "ok": true,
-      "detalhe": "24a73c28-8a17-410e-81e6-edca47032e13"
+      "detalhe": "a552dc01-ec65-4729-8299-fceea5e40990"
     },
     {
       "nome": "T0 202610: referência Python = DuckDB",
       "ok": true,
-      "detalhe": "538570 linhas, eecb22285c67f1cb… × 538570, eecb22285c67f1cb…"
+      "detalhe": "538.570 linhas, eecb22285c67f1cb… × 538.570, eecb22285c67f1cb…"
     },
     {
       "nome": "T0 202610: staging apagada no fim",
       "ok": true,
-      "detalhe": "carga=24a73c28-8a17-410e-81e6-edca47032e13"
+      "detalhe": "carga=a552dc01-ec65-4729-8299-fceea5e40990"
     },
     {
       "nome": "T0 202611: manifesto aponta a carga",
       "ok": true,
-      "detalhe": "24a73c28-8a17-410e-81e6-edca47032e13"
+      "detalhe": "a552dc01-ec65-4729-8299-fceea5e40990"
     },
     {
       "nome": "T0 202611: referência Python = DuckDB",
       "ok": true,
-      "detalhe": "329155 linhas, 9ddcd09d946a8a8b… × 329155, 9ddcd09d946a8a8b…"
+      "detalhe": "329.155 linhas, 9ddcd09d946a8a8b… × 329.155, 9ddcd09d946a8a8b…"
     },
     {
       "nome": "T0 202611: staging apagada no fim",
       "ok": true,
-      "detalhe": "carga=24a73c28-8a17-410e-81e6-edca47032e13"
+      "detalhe": "carga=a552dc01-ec65-4729-8299-fceea5e40990"
     },
     {
       "nome": "reexecução 202609: mesmo hash e mesma contagem",
       "ok": true,
-      "detalhe": "538758 linhas, 4a38b432ac9783b9…"
+      "detalhe": "538.758 linhas, 4a38b432ac9783b9…"
     },
     {
       "nome": "reexecução 202609: ouro idêntico",
@@ -253,12 +253,12 @@
     {
       "nome": "reexecução 202609: 2 versões na bronze, manifesto na nova",
       "ok": true,
-      "detalhe": "2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948"
+      "detalhe": "2 versões; vigente c2dfc491-5630-4b7d-96ea-243b795cf2f5"
     },
     {
       "nome": "reexecução 202610: mesmo hash e mesma contagem",
       "ok": true,
-      "detalhe": "538570 linhas, eecb22285c67f1cb…"
+      "detalhe": "538.570 linhas, eecb22285c67f1cb…"
     },
     {
       "nome": "reexecução 202610: ouro idêntico",
@@ -268,12 +268,12 @@
     {
       "nome": "reexecução 202610: 2 versões na bronze, manifesto na nova",
       "ok": true,
-      "detalhe": "2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948"
+      "detalhe": "2 versões; vigente c2dfc491-5630-4b7d-96ea-243b795cf2f5"
     },
     {
       "nome": "reexecução 202611: mesmo hash e mesma contagem",
       "ok": true,
-      "detalhe": "329155 linhas, 9ddcd09d946a8a8b…"
+      "detalhe": "329.155 linhas, 9ddcd09d946a8a8b…"
     },
     {
       "nome": "reexecução 202611: ouro idêntico",
@@ -283,7 +283,7 @@
     {
       "nome": "reexecução 202611: 2 versões na bronze, manifesto na nova",
       "ok": true,
-      "detalhe": "2 versões; vigente 9fcbbb91-8a53-4276-8cd3-9256bb33b948"
+      "detalhe": "2 versões; vigente c2dfc491-5630-4b7d-96ea-243b795cf2f5"
     },
     {
       "nome": "T1 202609: mês não republicado ficou igual",
@@ -293,12 +293,12 @@
     {
       "nome": "T1 202610: prata = T1 (hash calculado à parte)",
       "ok": true,
-      "detalhe": "538570 linhas, 6f51a47a44c12a7a…"
+      "detalhe": "538.570 linhas, 6f51a47a44c12a7a…"
     },
     {
       "nome": "T1 202610: contagem igual à de T0 e hash diferente",
       "ok": true,
-      "detalhe": "538570 = 538570; eecb22285c67… ≠ 6f51a47a44c1…"
+      "detalhe": "538.570 = 538.570; eecb22285c67… ≠ 6f51a47a44c1…"
     },
     {
       "nome": "T1 202610: ouro refeito",
@@ -343,7 +343,7 @@
     {
       "nome": "divergência 202610: manifesto continua na carga T1",
       "ok": true,
-      "detalhe": "5d30790c-1ba3-46b2-9484-917fdde511b4"
+      "detalhe": "b9d592ed-fee3-4027-ad33-d32fef12a733"
     },
     {
       "nome": "divergência 202610: prata intacta (= T1)",
@@ -353,11 +353,11 @@
     {
       "nome": "divergência 202610: staging preservada para diagnóstico",
       "ok": true,
-      "detalhe": "carga=c3c2e7de-66a6-4876-959e-5dac4612f4e6"
+      "detalhe": "carga=dad1d492-dda4-4dfe-9dc5-9a15cca04200"
     }
   ],
   "ambiente": {
-    "commit": "44d87b258fb0dec060f85699a2bb48abc3f96bc0",
+    "commit": "dec3a555307c578a591bc1573b6434ae72102297",
     "codigo_com_alteracao_local": false,
     "python": "3.12.16",
     "duckdb": "2.0.1",

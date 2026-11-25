@@ -76,7 +76,7 @@ Com os arquivos reais de set., out. e nov./2026, baixados em 24/11/2026
 | Republicação simulada de out/2026 (3 linhas alteradas, 1 removida, 1 incluída) | só outubro muda; cada linha conferida na prata | 10 de 10 |
 | Divergência injetada na staging | a validação falha pelo hash, e a prata fica intacta | 4 de 4 |
 
-Maior tempo da Function nesta máquina: 2,54 s (validar + reconciliar somados), contra os 230 s que
+Maior tempo da Function nesta máquina: 2,55 s (validar + reconciliar somados), contra os 230 s que
 uma Function disparada por HTTP tem para responder a cada chamada.
 
 ## A fonte reescrevendo o passado
