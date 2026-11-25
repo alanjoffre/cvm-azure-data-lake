@@ -33,7 +33,7 @@ tipo de cada coluna vem do dicionário ([`esquema.py`](../src/cvm_lake/esquema.p
 | `TP_FUNDO_CLASSE` | varchar(20) | 3 valores: `CLASSES - FIF`, `CLASSE FIF/FAPI`, `FI` |
 | `CNPJ_FUNDO_CLASSE` | varchar(18) | formato `00.000.000/0000-00` |
 | `ID_SUBCLASSE` | varchar(15) | vazio em 96% das linhas: o vazio é um valor da chave, não ausência |
-| `DT_COMPTC` | date | só dias de semana (22 em setembro e outubro); nos feriados do período (07/09, 12/10 e 02/11), no máximo 13 linhas, contra ~24 mil num dia comum; 20/11 (feriado nacional) não aparece |
+| `DT_COMPTC` | date | só dias de semana (22 em setembro e outubro); nos feriados do período (07/09, 12/10 e 02/11), no máximo 13 linhas, contra 23,7 mil a 25,7 mil num dia comum; 20/11 (feriado nacional) não aparece |
 | `VL_TOTAL` | numeric(17,2) | negativos em 213 a 277 linhas por mês; em outubro chega a 15 dígitos inteiros, o limite exato do tipo |
 | `VL_QUOTA` | numeric(27,12) | negativos em 380 a 622 linhas por mês, e zeros; até 21 dígitos significativos |
 | `VL_PATRIM_LIQ` | numeric(17,2) | negativos em 402 a 601 linhas por mês |
