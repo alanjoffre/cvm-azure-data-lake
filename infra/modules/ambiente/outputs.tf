@@ -34,6 +34,6 @@ output "key_vault_uri" {
 }
 
 output "papeis_atribuidos" {
-  description = "Nome de cada papel que o módulo atribui. Os testes cobram que todos estão na condição do bootstrap."
+  description = "Nome de cada papel que o módulo atribui. Os testes cobram que todos estejam na condição do bootstrap."
   value       = { for k, a in local.atribuicoes : k => a.papel }
 }

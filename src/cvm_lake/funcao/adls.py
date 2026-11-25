@@ -34,6 +34,9 @@ def _como_oserror(caminho: str) -> Iterator[None]:
 
 
 class ArmazenamentoADLS:
+    """ADLS Gen2 com a identidade gerenciada da Function; grava por arquivo temporário e rename
+    atômico, para quem lê nunca ver um arquivo pela metade."""
+
     def __init__(self, servico: DataLakeServiceClient) -> None:
         self._servico = servico
         self.raiz = servico.url.rstrip("/")
@@ -51,8 +54,12 @@ class ArmazenamentoADLS:
     def __enter__(self) -> ArmazenamentoADLS:
         return self
 
-    def __exit__(self, tipo: type[BaseException] | None, erro: BaseException | None,
-                 rastro: TracebackType | None) -> None:
+    def __exit__(
+        self,
+        tipo: type[BaseException] | None,
+        erro: BaseException | None,
+        rastro: TracebackType | None,
+    ) -> None:
         self.fechar()
 
     def fechar(self) -> None:

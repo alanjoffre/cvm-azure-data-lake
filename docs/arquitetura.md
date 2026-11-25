@@ -77,7 +77,7 @@ Papéis (D2):
 ## 3. O pipeline do ADF
 
 Dois pipelines: o pai (`pl_inf_diario`) monta a lista de meses e chama o filho
-(`pl_inf_diario_mes`) uma vez por mês. O filho pode ser executado e testado sozinho, e reprocessar
+(`pl_inf_diario_mes`) uma vez por mês. O filho pode ser testado sozinho, mas reprocessar
 um mês é chamar o pai com aquele mês na lista (D6). Dois gatilhos seguem o contrato da fonte (D3):
 
 | Gatilho | Quando | Meses | Por quê |
@@ -86,9 +86,9 @@ um mês é chamar o pai com aquele mês na lista (D6). Dois gatilhos seguem o co
 | `tr_semanal` | domingo, 10:00 | M-2 a M-11 | atualização semanal da CVM (premissa em D3) |
 | execução manual | sob demanda | lista explícita (`competencias`) | carga inicial e reprocessamento forçado |
 
-O pai tem `concurrency: 1`: uma execução que chega com outra em andamento (o semanal e uma manual,
-por exemplo) fica na fila, e duas cargas nunca mexem no mesmo mês ao mesmo tempo. Um mês repetido
-na lista roda uma vez só (`union`).
+O pai tem `concurrency: 1`: uma execução que chega com outra em andamento (a do gatilho semanal e
+uma manual, por exemplo) fica na fila, e duas cargas nunca mexem no mesmo mês ao mesmo tempo. Um
+mês repetido na lista roda uma vez só (`union`).
 
 ```mermaid
 flowchart TB
@@ -116,7 +116,7 @@ Pontos de desenho:
   sobrescrito. Dá para auditar o que a CVM publicou em cada dia e reprocessar sem baixar de novo.
   Uma regra de ciclo de vida apaga as versões com mais de 90 dias.
 - **A partição só é trocada depois de validada** (D6, D7). A versão nova vai primeiro para a
-  staging, e a Function confere contagem, hash e chave contra a bronze. Se diverge, a Function
+  staging, e a Function confere contagem, hash e chave contra a bronze. Se divergir, a Function
   responde `ok: false`, uma atividade Fail derruba a carga, e a prata continua com a versão
   anterior.
 - **Prata é substituída por mês inteiro**, nunca recebe append (D6). Rodar duas vezes dá o mesmo
@@ -135,8 +135,8 @@ Pontos de desenho:
   único leitor é a Function, no passo 6. Com leitores concorrentes, a saída é um formato de tabela
   com transação (Delta Lake), registrado em D6 como evolução.
 - **Retentativa só onde é segura.** Copy, Delete e Get Metadata têm retentativa (2 vezes). As
-  chamadas à Function não têm, e a resposta dela tem de chegar em até 230 s, o limite do ADF
-  para essa atividade.
+  chamadas à Function não têm, e a resposta dela tem de chegar em até 230 s, o limite de
+  uma Function disparada por HTTP.
 - **Falha não é silenciosa.** Quando a prova não bate, a Function responde `ok: false`, a
   atividade Fail seguinte derruba o pipeline, e o alerta pela métrica de execuções com falha do
   ADF manda e-mail.
@@ -163,7 +163,7 @@ controle/cvm/inf_diario/competencia=202609/carga=<RUN_ID>.json
 | staging | o Parquet da carga, antes de validar | apagado no fim da carga; ciclo de vida de 7 dias para o que sobrar de uma falha |
 | prata | Parquet com os campos do dicionário da CVM: decimal, inteiro e a data em texto ISO ([`adf.md`](adf.md#passo-2-zip--parquet-sem-data-flow)) | uma partição por mês; substituída inteira; chave única (D4) |
 | ouro | por fundo/classe, subclasse e mês: PL e cotistas no último dia, captação, resgate e captação líquida no mês, variação da cota no mês | refeito por mês a partir da prata |
-| controle | por mês: o manifesto (carga vigente, linhas, hash, ETag) e um relatório por carga | escrito pela Function, um arquivo por mês |
+| controle | por mês: o manifesto (carga vigente, linhas, hash, ETag) e um relatório por carga | escrito pela Function; manifesto sobrescrito a cada carga, relatório novo por carga |
 
 **Tipos na prata.** O Copy do ADF não tem tipo de data sem hora, então a data vai como texto
 ISO, e `NR_COTST` vai como inteiro de 64 bits. A precisão e a escala com que ele grava o decimal
@@ -182,7 +182,7 @@ A validação (antes da troca) e a reconciliação (depois) respondem às mesmas
    do formato do arquivo.
 
 A reconciliação ainda confere que o ouro soma as mesmas linhas da prata. A Function responde
-sempre um objeto JSON (`ok`, contagens, hashes), como o ADF exige.
+sempre com um objeto JSON (`ok`, contagens, hashes), como o ADF exige.
 
 **A republicação é simulada**, porque não dá para pedir à CVM que reapresente um mês. Duas
 versões do mesmo mês (T0, a real, e T1, com linhas alteradas, uma removida e uma incluída) passam
@@ -235,11 +235,11 @@ flowchart LR
 | Deploy | Federação de identidade, sem senha de service principal no Azure DevOps. A identidade do pipeline tem `Contributor` no resource group de cada ambiente e `Role Based Access Control Administrator` com condição: só cria e remove atribuições dos 5 papéis de [`papeis_atribuiveis.json`](../infra/papeis_atribuiveis.json) (`Storage Blob Data Contributor`, `Storage Blob Data Owner`, `Storage Table Data Contributor`, `Key Vault Secrets User` e `Key Vault Secrets Officer`), e só a principais de serviço. O módulo do ambiente lê a mesma lista: um papel fora dela quebra o plano. No estado remoto, só `Storage Blob Data Contributor` no container do estado |
 | Agente | Pipeline de deploy com `pr: none` e build de PR de fork desligado na organização (D10) |
 | Rede | Endpoints públicos com TLS 1.2 mínimo e sem acesso anônimo a blob. Endpoint privado e VNet gerenciada ficam fora por custo (D12) |
-| Repositório | Nenhum ID de assinatura, tenant ou segredo versionado: a assinatura e o tenant chegam por `ARM_*`, os e-mails de alerta por `TF_VAR_emails_alerta` e a conta do estado por `-backend-config`, todos variáveis do pipeline |
+| Repositório | Nenhum ID de assinatura, tenant ou segredo versionado: a assinatura e o tenant chegam por `ARM_*`, os e-mails de alerta por `TF_VAR_emails_alerta` e a conta do estado por `-backend-config`, todos vindos de variáveis do pipeline |
 
 ## 8. Custo estimado
 
-Estimativa para um mês de operação. Não é medição. Os preços são os públicos de varejo (USD, east
+Estimativa para um mês de operação. Não é medição. Os preços são os públicos de varejo (USD, East
 US 2, pela Retail Prices API da Azure em 19/11/2026) e serão conferidos na calculadora de preços
 antes de qualquer execução.
 
@@ -250,13 +250,13 @@ domingos do semanal.
 |---|---|---|
 | ADF: execuções de atividade | ~92 cargas × ~12 atividades (com o Execute Pipeline e as checagens) + ~30 execuções do pai × 3 ≈ 1.200; contagem exata a conferir na calculadora | ~US$ 1 por 1.000 execuções |
 | ADF: cópia (DIU-hora) | 3 cópias por carga, poucos segundos cada (cobrança mínima de 1 minuto) | alguns dólares |
-| ADLS Gen2 | ~1 GB (bronze com 90 dias + prata + ouro) | centavos |
-| Function (Flex Consumption) | ~184 chamadas de segundos (2 por carga) | a conferir na calculadora |
+| ADLS Gen2 | ~3 GB (bronze com 90 dias + prata + ouro) | centavos |
+| Function (Flex Consumption) | ~184 chamadas de poucos segundos (2 por carga) | a conferir na calculadora |
 | Key Vault | poucas leituras de segredo | centavos |
 | Azure DevOps | 1 usuário Basic; agente próprio (o *tier* auto-hospedado inclui 1 job paralelo sem limite de tempo) | a máquina do agente é de quem implanta |
 
-Fora de propósito, por serem os medidores caros: Data Flow, VNet gerenciada, Log Analytics,
-endpoint privado. As travas de custo para quem for implantar estão no
+Ficam de fora, de propósito, por serem os medidores caros: Data Flow, VNet gerenciada, Log
+Analytics e endpoint privado. As travas de custo para quem for implantar estão no
 [`runbook.md`](runbook.md).
 
 ## 9. Limites do desenho

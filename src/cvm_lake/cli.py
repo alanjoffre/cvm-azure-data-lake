@@ -1,7 +1,7 @@
 """Linha de comando: ``cvm-lake baixar`` (snapshot T0 da CVM) e ``cvm-lake prova`` (relatório).
 
-    uv run cvm-lake baixar --competencias 202609 202610 202611 --destino dados/origem/T0
-    uv run cvm-lake prova --origem dados/origem/T0 --trabalho saida/prova --relatorio reports
+uv run cvm-lake baixar --competencias 202609 202610 202611 --destino dados/origem/T0
+uv run cvm-lake prova --origem dados/origem/T0 --trabalho saida/prova --relatorio reports
 """
 
 from __future__ import annotations
@@ -20,7 +20,9 @@ import duckdb
 from cvm_lake import prova_completa
 from cvm_lake.origem import OrigemHTTP, guardar
 
-LIMITE_FUNCAO_S = 230  # o ADF espera a resposta da atividade Azure Function por até 230 s
+# Uma Function disparada por HTTP tem 230 s para responder (idle timeout do Azure Load Balancer),
+# qualquer que seja o functionTimeout: é o limite de cada chamada da atividade do ADF.
+LIMITE_FUNCAO_S = 230
 
 
 def _git(*args: str) -> str:
@@ -33,9 +35,13 @@ def _git(*args: str) -> str:
 
 def _ambiente() -> dict[str, Any]:
     sujo = bool(_git("status", "--porcelain", "--", "src", "tests", "pyproject.toml"))
-    return {"commit": _git("rev-parse", "HEAD"), "codigo_com_alteracao_local": sujo,
-            "python": platform.python_version(), "duckdb": duckdb.__version__,
-            "sistema": f"{platform.system()} {platform.machine()}"}
+    return {
+        "commit": _git("rev-parse", "HEAD"),
+        "codigo_com_alteracao_local": sujo,
+        "python": platform.python_version(),
+        "duckdb": duckdb.__version__,
+        "sistema": f"{platform.system()} {platform.machine()}",
+    }
 
 
 def _baixar(args: argparse.Namespace) -> int:
@@ -44,13 +50,14 @@ def _baixar(args: argparse.Namespace) -> int:
         arquivo = origem.baixar(competencia)
         destino = guardar(arquivo, Path(args.destino), competencia)
         m = arquivo.metadados
-        print(f"{competencia}: {m.bytes} bytes, Last-Modified {m.last_modified}, "
-              f"ETag {m.etag} → {destino}")
+        print(
+            f"{competencia}: {m.bytes} bytes, Last-Modified {m.last_modified}, "
+            f"ETag {m.etag} → {destino}"
+        )
     return 0
 
 
-def _mil(n: int) -> str:
-    return f"{n:,}".replace(",", ".")
+_mil = prova_completa.mil
 
 
 def _seg(s: float) -> str:
@@ -59,6 +66,7 @@ def _seg(s: float) -> str:
 
 
 def para_markdown(r: dict[str, Any]) -> str:
+    """Monta reports/prova.md a partir do dicionário que vai para reports/prova.json."""
     amb = r["ambiente"]
     ok = sum(c["ok"] for c in r["checagens"])
     linhas = [
@@ -86,7 +94,8 @@ def para_markdown(r: dict[str, Any]) -> str:
             f"| {c} | {_mil(p['linhas'])} | {_mil(p['bytes_zip'])} | {_mil(p['bytes_csv'])} | "
             f"{_mil(p['fundos'])} | {_mil(p['pares_fundo_subclasse'])} | {p['datas']} "
             f"({p['primeira_data']} a {p['ultima_data']}) | {_mil(p['linhas_sem_subclasse'])} | "
-            f"{o['last_modified'] or '—'} | `{o['etag'] or '—'}` |")
+            f"{o['last_modified'] or '—'} | `{o['etag'] or '—'}` |"
+        )
     linhas += ["", "SHA-256 canônico de cada mês em T0 (DuckDB e referência Python):", ""]
     for c, m in r["meses"].items():
         linhas.append(f"- {c}: `{m['sha256_t0']}`")
@@ -96,7 +105,7 @@ def para_markdown(r: dict[str, Any]) -> str:
         "## Republicação simulada",
         "",
         f"T1 de {rep['competencia']}: {len(rep['alteradas'])} linhas alteradas (+1.000,00 em "
-        f"`VL_PATRIM_LIQ` e `CAPTC_DIA`), 1 removida e 1 incluída. Mesma contagem de T0 "
+        f"`VL_PATRIM_LIQ` e `CAPTC_DIA`), 1 removida e 1 incluída. A mesma contagem de T0 "
         f"({_mil(rep['linhas_t1'])}), hash `{rep['sha256_t1'][:16]}…`.",
         "",
         "## Checagens",
@@ -111,19 +120,25 @@ def para_markdown(r: dict[str, Any]) -> str:
         "",
         "## Tempos por mês",
         "",
-        "`funcao_s` = validar + reconciliar, o trabalho que a Function fará. Medido nesta máquina, "
-        f"não na Azure: a folga contra os {LIMITE_FUNCAO_S} s que o ADF espera pela resposta da "
-        "Function se confirma na execução na Azure.",
+        "Function (s) = validar + reconciliar, as duas chamadas que a Function fará. Medido nesta "
+        f"máquina, não na Azure: a folga contra os {LIMITE_FUNCAO_S} s que uma Function por HTTP "
+        "tem para responder se confirma na execução na Azure.",
         "",
-        "| Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Função (s) |",
+        "| Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Function (s) |",
         "|---|---|---:|---:|---:|---:|",
     ]
     for t in r["tempos"]:
-        linhas.append(f"| {t['carga']} | {t['competencia']} | {_seg(t['pipeline_s'])} | "
-                      f"{_seg(t['validar_s'])} | {_seg(t['reconciliar_s'])} | "
-                      f"{_seg(t['funcao_s'])} |")
-    linhas += ["", f"Maior tempo da Function: {_seg(r['funcao_s_max'])} s "
-               f"(limite do ADF: {LIMITE_FUNCAO_S} s).", ""]
+        linhas.append(
+            f"| {t['carga']} | {t['competencia']} | {_seg(t['pipeline_s'])} | "
+            f"{_seg(t['validar_s'])} | {_seg(t['reconciliar_s'])} | "
+            f"{_seg(t['funcao_s'])} |"
+        )
+    linhas += [
+        "",
+        f"Maior tempo da Function (as duas chamadas somadas): {_seg(r['funcao_s_max'])} s. "
+        f"Cada chamada HTTP tem até {LIMITE_FUNCAO_S} s para responder.",
+        "",
+    ]
     return "\n".join(linhas)
 
 
@@ -133,24 +148,28 @@ def _prova(args: argparse.Namespace) -> int:
         shutil.rmtree(trabalho)
     competencias = args.competencias or sorted(
         p.name.removeprefix("inf_diario_fi_").removesuffix(".zip")
-        for p in Path(args.origem).glob("inf_diario_fi_*.zip"))
-    relatorio = prova_completa.executar(Path(args.origem), competencias, trabalho,
-                                        args.republicar)
+        for p in Path(args.origem).glob("inf_diario_fi_*.zip")
+    )
+    relatorio = prova_completa.executar(Path(args.origem), competencias, trabalho, args.republicar)
     relatorio["ambiente"] = _ambiente()
     pasta = Path(args.relatorio)
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "prova.json").write_text(
-        json.dumps(relatorio, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        json.dumps(relatorio, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     (pasta / "prova.md").write_text(para_markdown(relatorio), encoding="utf-8")
     falhas = [c for c in relatorio["checagens"] if not c["ok"]]
-    print(f"{len(relatorio['checagens']) - len(falhas)} de {len(relatorio['checagens'])} "
-          f"checagens ok; relatório em {pasta / 'prova.md'}")
+    print(
+        f"{len(relatorio['checagens']) - len(falhas)} de {len(relatorio['checagens'])} "
+        f"checagens ok; relatório em {pasta / 'prova.md'}"
+    )
     for c in falhas:
         print(f"FALHOU: {c['nome']}: {c['detalhe']}", file=sys.stderr)
     return 0 if relatorio["ok"] else 1
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Entrada do comando cvm-lake; devolve o código de saída (0 = passou)."""
     parser = argparse.ArgumentParser(prog="cvm-lake", description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="comando", required=True)
 

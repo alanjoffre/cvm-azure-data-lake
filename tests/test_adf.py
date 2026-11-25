@@ -97,6 +97,7 @@ def _expressoes(no: Any) -> Iterator[str]:
 
 # --- referências ---------------------------------------------------------------------------
 
+
 def test_toda_referencia_aponta_para_um_recurso_que_existe() -> None:
     existentes = {"LinkedServiceReference": LS, "DatasetReference": DS, "PipelineReference": PL}
     todos = [*LS.values(), *DS.values(), *PL.values(), *TR.values()]
@@ -151,16 +152,16 @@ def test_depends_on_aponta_para_atividade_irma_e_so_em_sucesso() -> None:
 # --- o pipeline filho: ordem, caminhos e Function -------------------------------------------
 
 ORDEM = [
-    "copiar_origem_para_bronze",   # 1
-    "copiar_zip_para_staging",     # 2
-    "validar_staging",             # 3
+    "copiar_origem_para_bronze",  # 1
+    "copiar_zip_para_staging",  # 2
+    "validar_staging",  # 3
     "validacao_ok",
     "prata_existe",
-    "apagar_prata_se_existe",      # 4
-    "copiar_staging_para_prata",   # 5
-    "reconciliar_prata",           # 6
+    "apagar_prata_se_existe",  # 4
+    "copiar_staging_para_prata",  # 5
+    "reconciliar_prata",  # 6
     "reconciliacao_ok",
-    "apagar_staging",              # 7
+    "apagar_staging",  # 7
 ]
 
 
@@ -210,10 +211,13 @@ def test_url_da_cvm_e_a_de_origem_py(competencia: str) -> None:
     (ref,) = _filho("copiar_origem_para_bronze")["inputs"]
     dataset = DS[ref["referenceName"]]
     ls = LS[dataset["linkedServiceName"]["referenceName"]]
-    params = {k: avaliar(v, Contexto(parametros={"competencia": competencia}))
-              for k, v in ref["parameters"].items()}
-    relativa = avaliar(dataset["typeProperties"]["location"]["relativeUrl"],
-                       Contexto(dataset=params))
+    params = {
+        k: avaliar(v, Contexto(parametros={"competencia": competencia}))
+        for k, v in ref["parameters"].items()
+    }
+    relativa = avaliar(
+        dataset["typeProperties"]["location"]["relativeUrl"], Contexto(dataset=params)
+    )
     assert ls["typeProperties"]["url"] + relativa == f"{URL_BASE_CVM}/{nome_arquivo(competencia)}"
 
 
@@ -225,8 +229,11 @@ def test_corpo_da_function_e_o_que_prova_py_recebe(nome: str) -> None:
     atividade = _filho(nome)
     tp = atividade["typeProperties"]
     etapa = getattr(prova, tp["functionName"])
-    obrigatorios = {n for n, p in inspect.signature(etapa).parameters.items()
-                    if p.default is inspect.Parameter.empty} - {"arm", "lake"}
+    obrigatorios = {
+        n
+        for n, p in inspect.signature(etapa).parameters.items()
+        if p.default is inspect.Parameter.empty
+    } - {"arm", "lake"}
     corpo = avaliar(tp["body"], Contexto(parametros={"competencia": "202611", "carga": CARGA}))
     assert corpo == {"competencia": "202611", "carga": CARGA}
     assert set(corpo) == obrigatorios
@@ -236,15 +243,18 @@ def test_corpo_da_function_e_o_que_prova_py_recebe(nome: str) -> None:
 
 @pytest.mark.parametrize("nome", FUNCOES)
 def test_resposta_com_ok_false_cai_numa_atividade_fail(nome: str) -> None:
-    (guarda,) = [a for a in FILHO["activities"]
-                 if [d["activity"] for d in a["dependsOn"]] == [nome]]
+    (guarda,) = [
+        a for a in FILHO["activities"] if [d["activity"] for d in a["dependsOn"]] == [nome]
+    ]
     assert guarda["type"] == "IfCondition"
     tp = guarda["typeProperties"]
     assert tp.get("ifTrueActivities", []) == []
     (falha,) = tp["ifFalseActivities"]
     assert falha["type"] == "Fail"
-    for resposta, esperado in (({"ok": True, "falhas": []}, True),
-                               ({"ok": False, "falhas": ["a", "b"]}, False)):
+    for resposta, esperado in (
+        ({"ok": True, "falhas": []}, True),
+        ({"ok": False, "falhas": ["a", "b"]}, False),
+    ):
         ctx = Contexto(atividades={nome: resposta})
         assert avaliar(tp["expression"], ctx) is esperado
     recusa = {"ok": False, "falhas": ["contagem 3 × 2", "x"]}
@@ -272,7 +282,8 @@ def test_retentativa_so_onde_repetir_e_seguro() -> None:
 # --- Copy ZIP → Parquet ---------------------------------------------------------------------
 
 COPY_PARQUET = _filho("copiar_zip_para_staging")["typeProperties"]
-# Tipos interinos do Copy → o que o Parquet guardaria, para simular a staging no DuckDB.
+# Tipos intermediários (interim) do Copy → o que o Parquet guardaria, para simular a staging
+# no DuckDB.
 # A precisão do Decimal no Parquet não está documentada (D2b): aqui, a mais larga.
 INTERINO_DUCKDB = {"String": "VARCHAR", "Int64": "BIGINT", "Decimal": "DECIMAL(38,18)"}
 
@@ -311,8 +322,10 @@ def test_staging_com_os_tipos_do_copy_passa_na_validacao(tmp_path: Path) -> None
     csv = montar_csv(linhas)
     arm.gravar_bytes(lake.bronze_zip("202610", CARGA), montar_zip(csv, "202610"))
 
-    tipos = {m["source"]["name"]: INTERINO_DUCKDB[m["source"]["type"]]
-             for m in COPY_PARQUET["translator"]["mappings"]}
+    tipos = {
+        m["source"]["name"]: INTERINO_DUCKDB[m["source"]["type"]]
+        for m in COPY_PARQUET["translator"]["mappings"]
+    }
     colunas = ", ".join(f"'{n}': '{t}'" for n, t in tipos.items())
     entrada = tmp_path / "entrada.csv"
     entrada.write_bytes(csv)
@@ -328,6 +341,7 @@ def test_staging_com_os_tipos_do_copy_passa_na_validacao(tmp_path: Path) -> None
 
 
 # --- o pipeline pai e os gatilhos -----------------------------------------------------------
+
 
 def _meses_do_pai(parametros: dict[str, Any], agora: datetime) -> list[str]:
     """Executa o pai no avaliador: escolher_meses → ForEach → parâmetro competencia do filho."""
@@ -360,14 +374,22 @@ def _gatilho(nome: str) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 DIAS = [date(2025, 12, 1) + timedelta(days=n) for n in range(0, 800, 3)]
-VIRADAS = [date(2026, 1, 1), date(2026, 12, 31), date(2027, 1, 1), date(2026, 3, 1),
-           date(2027, 11, 30), date(2028, 2, 29)]
+VIRADAS = [
+    date(2026, 1, 1),
+    date(2026, 12, 31),
+    date(2027, 1, 1),
+    date(2026, 3, 1),
+    date(2027, 11, 30),
+    date(2028, 2, 29),
+]
 
 
-@pytest.mark.parametrize(("gatilho", "esperado"),
-                         [("tr_diario", JANELA_DIARIA), ("tr_semanal", JANELA_SEMANAL)])
-def test_cada_gatilho_recarrega_a_janela_de_janela_py(gatilho: str,
-                                                      esperado: tuple[int, int]) -> None:
+@pytest.mark.parametrize(
+    ("gatilho", "esperado"), [("tr_diario", JANELA_DIARIA), ("tr_semanal", JANELA_SEMANAL)]
+)
+def test_cada_gatilho_recarrega_a_janela_de_janela_py(
+    gatilho: str, esperado: tuple[int, int]
+) -> None:
     _, params = _gatilho(gatilho)
     assert (params["de"], params["ate"]) == esperado
     for dia in DIAS + VIRADAS:
@@ -402,7 +424,9 @@ def test_execucao_manual_com_lista_carrega_exatamente_a_lista() -> None:
     assert _meses_do_pai({"competencias": [202609]}, agora) == ["202609"]
     # Mês repetido na lista: duas execuções do filho no mesmo mês colidiriam na troca da prata.
     assert _meses_do_pai({"competencias": ["202609", "202512", "202609"]}, agora) == [
-        "202609", "202512"]
+        "202609",
+        "202512",
+    ]
 
 
 def test_janela_invertida_falha_em_vez_de_carregar_nada() -> None:
@@ -417,19 +441,23 @@ def test_pai_uma_execucao_por_vez_e_lotes_de_quatro_meses() -> None:
     (carregar,) = laco["activities"]
     assert carregar["typeProperties"]["waitOnCompletion"] is True
     assert carregar["typeProperties"]["parameters"]["carga"] == {
-        "value": "@pipeline().RunId", "type": "Expression"}
+        "value": "@pipeline().RunId",
+        "type": "Expression",
+    }
     assert PAI["variables"]["meses"]["type"] == "Array"
 
 
 # --- segurança ------------------------------------------------------------------------------
+
 
 def test_nenhum_segredo_nem_id_de_assinatura_no_json() -> None:
     guid = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
     for arquivo in ADF.rglob("*.json"):
         texto = arquivo.read_text(encoding="utf-8")
         assert not guid.search(texto), arquivo
-        assert not re.search(r"accountKey|sasUri|sasToken|password|servicePrincipalKey", texto,
-                             re.I), arquivo
+        assert not re.search(
+            r"accountKey|sasUri|sasToken|password|servicePrincipalKey", texto, re.I
+        ), arquivo
 
 
 def test_lake_e_cofre_pela_identidade_gerenciada_e_chave_da_function_no_cofre() -> None:
@@ -443,8 +471,11 @@ def test_lake_e_cofre_pela_identidade_gerenciada_e_chave_da_function_no_cofre() 
 
 
 def test_enderecos_do_ambiente_nunca_resolvem_sem_o_parametro_do_arm() -> None:
-    for nome, chave in (("ls_adls_lake", "url"), ("ls_kv", "baseUrl"),
-                        ("ls_funcao", "functionAppUrl")):
+    for nome, chave in (
+        ("ls_adls_lake", "url"),
+        ("ls_kv", "baseUrl"),
+        ("ls_funcao", "functionAppUrl"),
+    ):
         host = re.sub(r"^https://([^/]+).*$", r"\1", LS[nome]["typeProperties"][chave])
         assert host.endswith(".invalid"), (nome, host)  # RFC 2606
 
@@ -476,11 +507,22 @@ def test_arm_tem_um_parametro_para_cada_endereco_do_ambiente() -> None:
 
 # Hosts da regra de endereço fixo do arm-ttk (DeploymentTemplate-Must-Not-Contain-Hardcoded-Uri),
 # que o ci/adf/armttk.sh pula por causa do $schema que o export grava com http://.
-HOSTS_FIXOS = ("management.core.windows.net", "gallery.azure.com", "management.azure.com",
-               "database.windows.net", "core.windows.net", "login.microsoftonline.com",
-               "graph.windows.net", "vault.azure.net", "datalake.azure.net",
-               "azuredatalakestore.net", "azuredatalakeanalytics.net", "api.loganalytics.io",
-               "asazure.windows.net", "batch.core.windows.net")
+HOSTS_FIXOS = (
+    "management.core.windows.net",
+    "gallery.azure.com",
+    "management.azure.com",
+    "database.windows.net",
+    "core.windows.net",
+    "login.microsoftonline.com",
+    "graph.windows.net",
+    "vault.azure.net",
+    "datalake.azure.net",
+    "azuredatalakestore.net",
+    "azuredatalakeanalytics.net",
+    "api.loganalytics.io",
+    "asazure.windows.net",
+    "batch.core.windows.net",
+)
 DEPENDE_DE = re.compile(r"^\[concat\(variables\('factoryId'\), '/(?P<tipo>\w+)/(?P<nome>\w+)'\)\]$")
 
 
@@ -489,15 +531,21 @@ def test_arm_so_traz_o_conteudo_da_fabrica() -> None:
     assert ARM is not None
     template = json.loads((ARM / "ARMTemplateForFactory.json").read_text())
     tipos = {r["type"] for r in template["resources"]}
-    assert "Microsoft.DataFactory/factories" not in tipos  # D9: a fábrica e a identidade
-    assert {"Microsoft.DataFactory/factories/pipelines",
-            "Microsoft.DataFactory/factories/triggers"} <= tipos
+    assert (
+        "Microsoft.DataFactory/factories" not in tipos
+    )  # D9: a fábrica e a identidade são do Terraform
+    assert {
+        "Microsoft.DataFactory/factories/pipelines",
+        "Microsoft.DataFactory/factories/triggers",
+    } <= tipos
     # Os endereços do ambiente chegam por parâmetro; nenhum fica fixo nos recursos.
     recursos = json.dumps(template["resources"]).lower()
     assert not [h for h in HOSTS_FIXOS if h in recursos]
     # Todo dependsOn aponta para um recurso deste template (as duas regras que o arm-ttk pula).
-    nomes = {(r["type"].rsplit("/", 1)[1], r["name"].split("'/")[-1].rstrip("')]"))
-             for r in template["resources"]}
+    nomes = {
+        (r["type"].rsplit("/", 1)[1], r["name"].split("'/")[-1].rstrip("')]"))
+        for r in template["resources"]
+    }
     for recurso in template["resources"]:
         for dep in recurso.get("dependsOn", []):
             achado = DEPENDE_DE.match(dep)

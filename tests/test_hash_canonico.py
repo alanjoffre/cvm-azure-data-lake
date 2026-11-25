@@ -92,13 +92,18 @@ def test_um_centavo_muda_o_hash() -> None:
 
 
 def test_subclasse_vazia_e_nulo_e_ordena_primeiro(tmp_path: Path) -> None:
-    linhas = [linha for linha in linhas_csv("202610") if linha[POS["CNPJ_FUNDO_CLASSE"]]
-              == linhas_csv("202610")[0][POS["CNPJ_FUNDO_CLASSE"]]]
+    linhas = [
+        linha
+        for linha in linhas_csv("202610")
+        if linha[POS["CNPJ_FUNDO_CLASSE"]] == linhas_csv("202610")[0][POS["CNPJ_FUNDO_CLASSE"]]
+    ]
     assert {linha[POS["ID_SUBCLASSE"]] for linha in linhas} == {"", "SUB000"}
     con = duckdb.connect(":memory:")
     resumir_csv(con, montar_csv(linhas))
-    primeira = con.execute(f"SELECT {esquema.sql_linha_canonica()} FROM bronze AS t "
-                           f"ORDER BY {esquema.sql_ordem_chave()} LIMIT 1").fetchone()
+    primeira = con.execute(
+        f"SELECT {esquema.sql_linha_canonica()} FROM bronze AS t "
+        f"ORDER BY {esquema.sql_ordem_chave()} LIMIT 1"
+    ).fetchone()
     assert primeira is not None and primeira[0].split("|")[2] == esquema.NULO_CANONICO
 
 

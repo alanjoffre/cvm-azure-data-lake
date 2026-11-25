@@ -3,7 +3,7 @@
 # Cada push na main roda o CI no agente próprio e publica dois artefatos: o ARM do ADF e o zip da
 # Function. O mesmo par vai para dev e, depois da aprovação, para prod: prod recebe exatamente o
 # que passou em dev, sem rebuild. A configuração fora deste arquivo (pool, service connection,
-# grupo de variáveis, aprovações) está no docs/runbook.md.
+# grupo de variáveis, aprovações) está em docs/runbook.md.
 #
 # Nada aqui guarda segredo ou ID: a autenticação é a federação de identidade da service
 # connection (sem segredo de cliente) e os valores do ambiente vêm do grupo de variáveis.
@@ -39,6 +39,7 @@ stages:
 
           - script: |
               uv run ruff check .
+              uv run ruff format --check .
               uv run mypy
               uv run pytest -q
             displayName: ruff, mypy e pytest

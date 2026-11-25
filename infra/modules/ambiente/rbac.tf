@@ -56,7 +56,7 @@ resource "azurerm_role_assignment" "papel" {
   principal_id       = each.value.principal
 
   # Todas são identidades de serviço (as gerenciadas e a da federação do pipeline). A condição
-  # do bootstrap só deixa atribuir a ServicePrincipal, e declarar o tipo evita a espera pela
+  # do bootstrap só deixa atribuir papéis a principais do tipo ServicePrincipal, e declarar o tipo evita a espera pela
   # replicação do Entra ID logo depois de a identidade nascer.
   principal_type                   = "ServicePrincipal"
   skip_service_principal_aad_check = true

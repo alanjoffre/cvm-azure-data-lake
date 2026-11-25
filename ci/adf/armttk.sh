@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# arm-ttk (o kit de testes de template ARM da Microsoft) sobre o ARM que ci/adf/validar.sh
+# Roda o arm-ttk (o kit de testes de template ARM da Microsoft) sobre o ARM que ci/adf/validar.sh
 # exporta. Precisa de PowerShell 7 (pwsh): roda no runner Linux do GitHub e no agente próprio.
 #   ci/adf/armttk.sh [pasta-do-arm]       # padrão: saida/arm
 set -euo pipefail

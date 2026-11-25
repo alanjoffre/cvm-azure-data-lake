@@ -19,8 +19,8 @@ resource "azurerm_monitor_action_group" "alerta" {
   tags = local.tags
 }
 
-# Qualquer execução de pipeline com falha. A Function que responde erro faz a atividade falhar,
-# e a falha sobe para o pipeline: uma métrica cobre a validação e a reconciliação.
+# Qualquer execução de pipeline com falha. O ok=false da Function cai na atividade Fail, que
+# derruba o pipeline: uma métrica cobre a validação e a reconciliação.
 resource "azurerm_monitor_metric_alert" "falha_pipeline" {
   name                = "alerta-falha-pipeline-${var.ambiente}"
   resource_group_name = data.azurerm_resource_group.ambiente.name

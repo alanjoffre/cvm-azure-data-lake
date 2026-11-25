@@ -1,7 +1,7 @@
 # A assinatura e o tenant chegam pelo ambiente (ARM_SUBSCRIPTION_ID, ARM_TENANT_ID e, no
 # pipeline, ARM_USE_OIDC com a federação de identidade). Nenhum ID no repositório.
 provider "azurerm" {
-  # Registrar provedores de recurso exige permissão na assinatura, que o pipeline não tem (ele só
+  # Registrar provedores de recursos exige permissão na assinatura, que o pipeline não tem (ele só
   # tem papel nos resource groups). O registro é feito uma vez no bootstrap (runbook, passo 1).
   resource_provider_registrations = "none"
 
@@ -12,7 +12,7 @@ provider "azurerm" {
   features {
     storage {
       # O recurso de conta de armazenamento lê propriedades do plano de dados (filas, site
-      # estático) por padrão. Nenhuma das duas é usada aqui; desligado, a identidade do pipeline
+      # estático) por padrão. Nenhuma das duas é usada aqui; com isso desligado, a identidade do pipeline
       # não precisa de papel de dados nas contas que ela mesma cria.
       data_plane_available = false
     }

@@ -19,7 +19,7 @@ resource "azurerm_data_factory" "adf" {
   # Sem github_configuration nem vsts_configuration: ligar o Git no ADF Studio traria de volta o
   # botão "Publish" e o branch adf_publish, e dev e prod deixariam de receber o mesmo ARM.
 
-  # VNet gerenciada desligada: o Integration Runtime gerenciado com VNet cobra por hora ligado.
+  # VNet gerenciada desligada: o Integration Runtime gerenciado com VNet cobra por hora em que fica ligado.
   managed_virtual_network_enabled = false
   public_network_enabled          = true
 

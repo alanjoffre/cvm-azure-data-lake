@@ -24,13 +24,14 @@ ETAPAS = ("validar", "reconciliar")
 Cabecalhos = Callable[[str], dict[str, Any]]
 
 
-def metadados_da_origem(cabecalhos: Cabecalhos, arm: Armazenamento, lake: Lake,
-                        competencia: str, carga: str) -> dict[str, Any]:
+def metadados_da_origem(
+    cabecalhos: Cabecalhos, arm: Armazenamento, lake: Lake, competencia: str, carga: str
+) -> dict[str, Any]:
     """O que o manifesto guarda da CVM, e se o tamanho servido ainda é o do ZIP da bronze.
 
     O ``HEAD`` acontece minutos depois do Copy. Se a CVM regravou o mês nesse meio-tempo, o
     ``ETag`` é de outra versão: ``confere_com_bronze`` falso diz que ele não descreve o que foi
-    carregado, e a otimização futura do D3 não pode pular o mês por ele. A falha do ``HEAD`` não
+    carregado, e a otimização futura da D3 não pode pular o mês por ele. A falha do ``HEAD`` não
     derruba a carga: o dado já está provado, e só a otimização fica sem o ``ETag``.
     """
     try:
@@ -53,15 +54,21 @@ def _pedido(corpo: bytes) -> tuple[str, str]:
     return conferir_competencia(dado["competencia"]), conferir_carga(dado["carga"])
 
 
-def tratar(etapa: str, corpo: bytes, arm: Armazenamento, lake: Lake,
-           cabecalhos: Cabecalhos) -> tuple[int, dict[str, Any]]:
+def tratar(
+    etapa: str, corpo: bytes, arm: Armazenamento, lake: Lake, cabecalhos: Cabecalhos
+) -> tuple[int, dict[str, Any]]:
+    """Valida o corpo e chama a etapa. Devolve (status HTTP, resposta): 400 para pedido
+    inválido; 200 com o resultado da prova, inclusive quando ``ok`` é falso."""
     if etapa not in ETAPAS:
         raise ValueError(f"etapa desconhecida: {etapa!r}")
     try:
         competencia, carga = _pedido(corpo)
     except (ValueError, KeyError, TypeError) as erro:  # JSONDecodeError é ValueError
-        return 400, {"etapa": etapa, "ok": False,
-                     "falhas": [f"pedido inválido: {type(erro).__name__}: {erro}"]}
+        return 400, {
+            "etapa": etapa,
+            "ok": False,
+            "falhas": [f"pedido inválido: {type(erro).__name__}: {erro}"],
+        }
     if etapa == "validar":
         return 200, prova.validar(arm, lake, competencia, carga)
     origem = metadados_da_origem(cabecalhos, arm, lake, competencia, carga)

@@ -15,7 +15,7 @@ adf/
 ```
 
 Não validado na Azure: validado na máquina com `ci/adf/validar.sh` (ver [Validar](#validar)). Cada
-atividade tem no próprio JSON uma `description` com o motivo dela.
+atividade de primeiro nível tem no próprio JSON uma `description` com o motivo dela.
 
 ## Pipeline pai: `pl_inf_diario`
 
@@ -25,11 +25,11 @@ atividade tem no próprio JSON uma `description` com o motivo dela.
 | `referencia` | string | vazio | a data que define M; vazio = agora. Os gatilhos passam `@trigger().scheduledTime` |
 | `competencias` | array | vazio | lista explícita de AAAAMM (carga inicial, reprocessamento); quando preenchida, `de` e `ate` são ignorados |
 
-1. `escolher_meses` (IfCondition): sem lista, a variável `meses` recebe
-   `range(de, ate - de + 1)`, os deslocamentos de M. Com lista, recebe a lista sem repetição
-   (`union` da lista com ela mesma): dois filhos no mesmo mês colidiriam na troca da prata. A escolha
-   passa por uma variável porque o `if` da linguagem de expressões não devolve array: o
-   validador recusa `if(Bool, Array, Array)` e também `string()` de array.
+1. `escolher_meses` (IfCondition): sem lista, a variável `meses` recebe `range(de, ate - de + 1)`,
+   os deslocamentos de M. Com lista, recebe a lista sem repetição (`union` da lista com ela mesma):
+   dois filhos no mesmo mês colidiriam na troca da prata. A escolha passa por uma variável porque o
+   `if` da linguagem de expressões não devolve array: o validador recusa `if(Bool, Array, Array)` e
+   também `string()` de array.
 2. `para_cada_competencia` (ForEach, lotes de 4 em paralelo) chama o filho com:
    - `competencia`: o deslocamento aplicado ao primeiro dia do mês de `referencia` convertida
      para o horário de Brasília (`convertFromUtc` com `E. South America Standard Time`,
@@ -63,7 +63,7 @@ testes calculam os caminhos a partir das expressões do JSON e comparam com esse
 |   | `reconciliacao_ok` | IfCondition → Fail | `ok = false` derruba a carga com `CVM_RECONCILIACAO`; o manifesto não é gravado | — |
 | 7 | `apagar_staging` | Delete | a staging da carga sai. Se a carga falhou antes, ela fica para diagnóstico, e o ciclo de vida a apaga em 7 dias | 2 |
 
-Cada atividade depende da anterior só em caso de sucesso. A primeira falha para o mês, e nada
+Cada atividade depende da anterior só em caso de sucesso. A primeira falha interrompe o mês, e nada
 depois dela roda. As retentativas ficam nas atividades em que repetir é seguro, porque a mesma
 carga regrava os mesmos caminhos. As chamadas à Function não têm retentativa: a resposta é
 determinística, e repetir não muda o resultado.
@@ -100,8 +100,8 @@ plano B (D2b).
 O ADF chama a Function por `POST` com o corpo
 `{"competencia": "AAAAMM", "carga": "<RunId>"}`, os parâmetros de `validar` e `reconciliar` em
 [`prova.py`](../src/cvm_lake/funcao/prova.py), fora o armazenamento e o lake. A Function responde
-um objeto JSON (a atividade exige objeto, não lista) com `etapa`, `ok`, `falhas` e os resumos.
-O limite de espera da atividade é de 230 s.
+com um objeto JSON (a atividade exige objeto, não lista) com `etapa`, `ok`, `falhas` e os resumos.
+A Function tem até 230 s para responder (limite das funções disparadas por HTTP, não do ADF).
 
 A falha da prova não depende de como a atividade trata o status HTTP, que a documentação não
 descreve: a Function responde `ok: false`, e a atividade Fail seguinte derruba a carga com as
@@ -112,7 +112,7 @@ para.
 A entrada HTTP ([`function_app.py`](../funcao_azure/function_app.py), que só liga a requisição
 a [`entrada.py`](../src/cvm_lake/funcao/entrada.py)) expõe `POST /api/validar` e
 `POST /api/reconciliar`, com chave de função. As rotas são os `functionName` das duas atividades,
-e um teste confere isso contra o JSON. A resposta é `200` com a resposta da prova, inclusive com
+e um teste confere isso contra o JSON. A resposta é `200` com o resultado da prova, inclusive com
 `ok: false`, e `400` para corpo inválido, que é defeito do pipeline, não do dado.
 
 Antes do `reconciliar`, a entrada faz um `HEAD` na URL do mês e entrega `ETag`, `Last-Modified`
@@ -128,14 +128,14 @@ do Terraform.
 
 | Gatilho | Agenda (`E. South America Standard Time`) | `de`, `ate` | Meses |
 |---|---|---|---|
-| `tr_diario` | semanal, seg a sáb, 10:00 | 0, 1 | M e M-1 |
+| `tr_diario` | recorrência semanal (seg. a sáb.), 10:00 | 0, 1 | M e M-1 |
 | `tr_semanal` | semanal, domingo, 10:00 | 2, 11 | M-2 a M-11 |
 
-Os dois passam `referencia = @trigger().scheduledTime`. Com fuso fora de UTC, o `startTime` vai
-sem o `Z`. O `runtimeState` no JSON é `Started`. No deploy, o script da Microsoft
-(`PrePostDeploymentScript.ps1`, gerado pelo export) para antes do ARM os gatilhos que mudaram e
-liga, depois do ARM, os que estão `Started` no template. Os testes conferem os meses de cada
-gatilho contra [`janela.py`](../src/cvm_lake/janela.py) em ~270 datas, inclusive as viradas de
+Os dois passam `referencia = @trigger().scheduledTime`. Com fuso fora de UTC, o `startTime` vai sem
+o `Z`. O `runtimeState` no JSON é `Started`. No deploy, o script da Microsoft
+(`PrePostDeploymentScript.ps1`, gerado pelo export) interrompe, antes do ARM, os gatilhos que
+mudaram e liga, depois do ARM, os que estão `Started` no template. Os testes conferem os meses de
+cada gatilho contra [`janela.py`](../src/cvm_lake/janela.py) em ~270 datas, inclusive as viradas de
 ano.
 
 ## Parâmetros do ARM
@@ -164,11 +164,12 @@ Precisa de Node 22 (LTS) e [uv](https://docs.astral.sh/uv/).
 ci/adf/validar.sh      # validate, export do ARM para saida/arm e os testes do JSON e do ARM
 ```
 
-- **`validate` e `export`** pelo [`@microsoft/azure-data-factory-utilities`](https://www.npmjs.com/package/@microsoft/azure-data-factory-utilities),
-  versão fixa em `ci/adf/package-lock.json`. O pacote baixa a cada execução o validador que o
-  ADF Studio usa, que não tem versão. O script registra o SHA-256 dele, e uma regra nova da
-  Microsoft pode reprovar um JSON que antes passava. O ID da fábrica é só texto: o pacote não
-  fala com a Azure, mas precisa de internet para baixar o validador.
+- **`validate` e `export`** pelo
+  [`@microsoft/azure-data-factory-utilities`](https://www.npmjs.com/package/@microsoft/azure-data-factory-utilities),
+  versão fixa em `ci/adf/package-lock.json`. O pacote baixa a cada execução o validador que o ADF
+  Studio usa, que não tem versão. O script registra o SHA-256 dele, e uma regra nova da Microsoft
+  pode reprovar um JSON que antes passava. O ID da fábrica é só texto: o pacote não fala com a
+  Azure, mas precisa de internet para baixar o validador.
 - **O que o validador pega:** dataset, linked service ou parâmetro inexistente e erro de tipo
   em expressão (conferido quebrando cada um). **O que ele não pega:** um `dependsOn` que aponta
   para uma atividade que não existe.

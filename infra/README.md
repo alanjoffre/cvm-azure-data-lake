@@ -46,7 +46,8 @@ infra/
 | Pipeline | Storage Blob Data Contributor | container do estado (bootstrap) |
 
 A condição só deixa o pipeline criar e remover atribuições dos papéis de
-`papeis_atribuiveis.json`, e só para principais de serviço. Ele não se dá `Owner` e não dá
+`papeis_atribuiveis.json`, e só para entidades de serviço (*service principals*). Com ela, o pipeline não pode se
+atribuir `Owner` e não dá
 papel a pessoas nem a grupos.
 
 ## Validar

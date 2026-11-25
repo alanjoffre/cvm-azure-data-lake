@@ -4,7 +4,7 @@ variable "ambiente" {
 
   validation {
     condition     = contains(["dev", "prod"], var.ambiente)
-    error_message = "O ambiente é dev ou prod."
+    error_message = "O ambiente precisa ser dev ou prod."
   }
 }
 
@@ -44,7 +44,7 @@ variable "orcamento_mensal" {
 }
 
 variable "retencao_bronze_dias" {
-  description = "Dias que uma versão da bronze fica guardada (D5)."
+  description = "Por quantos dias uma versão da bronze fica guardada (D5)."
   type        = number
   default     = 90
 }

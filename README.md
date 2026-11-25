@@ -51,21 +51,23 @@ flowchart LR
     ADF["Azure Data Factory<br/>diário: M e M-1<br/>semanal: M-2 a M-11"] -. orquestra .-> B
 ```
 
-Detalhes, layout do lake, segurança, ambientes e custo estimado: [`docs/arquitetura.md`](docs/arquitetura.md).
+Detalhes, layout do lake, segurança, ambientes e custo estimado:
+[`docs/arquitetura.md`](docs/arquitetura.md).
 
 ## Situação
 
 | Parte | Situação |
 |---|---|
 | Desenho e decisões | 13 decisões registradas ([`docs/decisoes.md`](docs/decisoes.md)) |
-| Carga local e prova com o dado da CVM | validado na máquina: 32 de 32 checagens com os arquivos reais de set, out e nov/2026 (nov parcial, até 23/11) ([relatório](reports/prova.md)) |
-| Terraform | validado sem conta: dev e prod pelo mesmo módulo, bootstrap do estado e das permissões; `fmt`, `validate`, tflint, Checkov e 16 testes com provider simulado ([`infra/`](infra/README.md)) |
+| Carga local e prova com o dado da CVM | validado na máquina: 32 de 32 checagens com os arquivos reais de set., out. e nov./2026 (nov. parcial, até 23/11) ([relatório](reports/prova.md)) |
+| Terraform | validado sem conta: dev e prod pelo mesmo módulo, bootstrap do estado e das permissões; `fmt`, `validate`, tflint, Checkov e 16 testes com provider simulado (17 execuções: a raiz roda com dev e com prod) ([`infra/`](infra/README.md)) |
 | ADF (JSON) | validado sem conta: pipeline pai e filho, gatilhos diário e semanal; validate e export do ARM pelo pacote da Microsoft e 31 testes do JSON e do ARM ([`docs/adf.md`](docs/adf.md)) |
 | CI/CD e runbook | escrito e conferido no esquema: Azure Pipelines com plano, aprovação e deploy de dev para prod (Terraform, Function, ADF); GitHub Actions sem credencial; o passo a passo em [`docs/runbook.md`](docs/runbook.md) |
 
 ## Resultado da prova
 
-Com os arquivos reais de set, out e nov/2026, baixados em 24/11/2026 ([relatório](reports/prova.md)):
+Com os arquivos reais de set., out. e nov./2026, baixados em 24/11/2026
+([relatório](reports/prova.md)):
 
 | Etapa | O que se cobra | Checagens |
 |---|---|---|
@@ -74,7 +76,8 @@ Com os arquivos reais de set, out e nov/2026, baixados em 24/11/2026 ([relatóri
 | Republicação simulada de out/2026 (3 linhas alteradas, 1 removida, 1 incluída) | só outubro muda; cada linha conferida na prata | 10 de 10 |
 | Divergência injetada na staging | a validação falha pelo hash, e a prata fica intacta | 4 de 4 |
 
-Maior tempo da Function nesta máquina: 2,53 s, contra o limite de 230 s do ADF.
+Maior tempo da Function nesta máquina: 2,53 s (validar + reconciliar somados), contra os 230 s que
+uma Function disparada por HTTP tem para responder a cada chamada.
 
 ## A fonte reescrevendo o passado
 
@@ -89,7 +92,7 @@ Precisa de Python 3.12 e [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --all-extras
-uv run pytest                                   # 103 testes e 4 pulados (os do ARM, ver abaixo)
+uv run pytest                                   # 103 passam e 4 ficam pulados: leem o ARM que ci/adf/validar.sh exporta
 uv run cvm-lake baixar --competencias 202609 202610 202611
 uv run cvm-lake prova --limpar                  # grava reports/prova.md e reports/prova.json
 ```
@@ -116,7 +119,7 @@ ci/adf/validar.sh     # validate e export do ARM pelo pacote da Microsoft, e os 
 Sem o ARM gerado, os 4 testes do ARM são pulados. Depois do `ci/adf/validar.sh`,
 `ADF_ARM=saida/arm uv run pytest` roda os 107.
 
-O pacote da Function e o arm-ttk (precisa de PowerShell 7):
+O pacote da Function e o arm-ttk (o arm-ttk precisa de PowerShell 7):
 
 ```bash
 uv run python ci/funcao/empacotar.py   # saida/funcao.zip, reprodutível, com o sha256

@@ -44,9 +44,9 @@ resource "azurerm_storage_container" "pacote" {
   container_access_type = "private"
 }
 
-# FC1 é o SKU do Flex Consumption: cobra por execução e por memória × tempo, escala a zero.
+# FC1 é o SKU do Flex Consumption: cobra por execução e por memória × tempo, escala até zero.
 resource "azurerm_service_plan" "funcao" {
-  #checkov:skip=CKV_AZURE_212: o Flex Consumption escala a zero e sobe instância por demanda; mínimo fixo seria custo parado.
+  #checkov:skip=CKV_AZURE_212: o Flex Consumption escala até zero e sobe instância sob demanda; mínimo fixo seria custo parado.
   #checkov:skip=CKV_AZURE_225: redundância de zona cobra instâncias sempre ligadas; a carga é diária e reexecutável (D3).
 
   name                = local.nome_plano
@@ -97,7 +97,7 @@ resource "azurerm_function_app_flex_consumption" "funcao" {
     # O provider (4.x) grava AzureWebJobsStorage como string de conexão com chave vazia mesmo
     # com SystemAssignedIdentity (issues 29693 e 33211 do terraform-provider-azurerm, abertas).
     # A string vazia é o contorno descrito nas issues: o runtime ignora o valor vazio e usa as
-    # duas chaves acima. Conferir na execução (testes.md, "Só na Azure").
+    # duas configurações acima. Conferir na execução (testes.md, "Só na Azure").
     "AzureWebJobsStorage" = ""
 
     # O que o código da Function lê: a conta do lake (o SDK monta o endpoint dfs a partir dela)

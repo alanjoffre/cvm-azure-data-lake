@@ -1,4 +1,4 @@
-# Produção: o mesmo módulo de dev; muda o resource group.
+# Produção: o mesmo módulo de dev; mudam só o nome do ambiente e o resource group.
 ambiente              = "prod"
 resource_group_name   = "rg-cvm-lake-prod"
 localizacao           = "eastus2"

@@ -2,7 +2,8 @@
 
 Pequeno, determinístico e com os casos que o arquivo real tem: subclasse vazia e preenchida,
 cota zero (que expôs o ``0E-12`` na referência), valores negativos, cota com zeros à direita
-(que o double perde) e um fundo que deixou de informar um dia (para a republicação incluir).
+(o double grava 1.5; a forma canônica devolve as 12 casas e o hash não muda) e um fundo que
+deixou de informar um dia (para a republicação incluir).
 """
 
 from __future__ import annotations
@@ -47,11 +48,20 @@ def linhas_csv(competencia: str, fundos: int = 12, semente: int = 7) -> list[lis
                 else:
                     cota = f"{sorteio.uniform(0.5, 9):.12f}"
                 total = sorteio.uniform(-5000, 9e6) if f == 5 else sorteio.uniform(0, 9e6)
-                linhas.append([
-                    tp, cnpj, subclasse, dia, f"{total:.2f}", cota,
-                    f"{sorteio.uniform(1e3, 9e6):.2f}", f"{sorteio.uniform(0, 5e4):.2f}",
-                    f"{sorteio.uniform(0, 5e4):.2f}", str(sorteio.randint(0, 4000)),
-                ])
+                linhas.append(
+                    [
+                        tp,
+                        cnpj,
+                        subclasse,
+                        dia,
+                        f"{total:.2f}",
+                        cota,
+                        f"{sorteio.uniform(1e3, 9e6):.2f}",
+                        f"{sorteio.uniform(0, 5e4):.2f}",
+                        f"{sorteio.uniform(0, 5e4):.2f}",
+                        str(sorteio.randint(0, 4000)),
+                    ]
+                )
     return linhas
 
 

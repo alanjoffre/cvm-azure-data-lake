@@ -11,6 +11,7 @@ SQL_OURO = """
 SELECT
     p."CNPJ_FUNDO_CLASSE"                              AS cnpj_fundo_classe,
     p."ID_SUBCLASSE"                                   AS id_subclasse,
+    -- arg_max(valor, DT_COMPTC): o valor do dia mais recente do mês (o tipo pode mudar no mês)
     arg_max(p."TP_FUNDO_CLASSE", p."DT_COMPTC")        AS tp_fundo_classe,
     min(p."DT_COMPTC")                                 AS primeiro_dia,
     max(p."DT_COMPTC")                                 AS ultimo_dia,

@@ -11,8 +11,9 @@
 #   2. apply      o Terraform cria ou ajusta o ambiente; as saídas viram variáveis do job.
 #   3. Function   antes do ADF: o linked service da Function lê no cofre a chave que este
 #                 passo grava (ci/deploy/funcao.sh).
-#   4. pré-script PrePostDeploymentScript.ps1 (gerado com o ARM). Sozinho, ele só para os
-#                 gatilhos cujo conteúdo mudou; com -ExplicitStopTriggerList, para os dois sempre.
+#   4. pré-script PrePostDeploymentScript.ps1 (gerado com o ARM). Sozinho, ele só interrompe os
+#                 gatilhos cujo conteúdo mudou; com -ExplicitStopTriggerList, interrompe os
+#                 dois sempre.
 #                 -ArmTemplateParameters aponta os parâmetros deste ambiente: sem ele, o script
 #                 procura ArmTemplateParametersForFactory.json, e o export grava ARMTemplate...
 #                 (no Linux, o nome não casa e a comparação dos gatilhos fica sem os parâmetros).
@@ -119,7 +120,7 @@ stages:
                     arguments: $(resource_group_name) $(funcao_nome) $(key_vault_nome) $(Pipeline.Workspace)/funcao/funcao.zip
 
                 - task: AzurePowerShell@5
-                  displayName: ADF, pré-deploy (para os dois gatilhos)
+                  displayName: ADF, pré-deploy (interrompe os dois gatilhos)
                   inputs:
                     azureSubscription: ${{ parameters.conexao }}
                     ScriptType: FilePath

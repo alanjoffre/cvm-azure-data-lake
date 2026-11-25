@@ -1,7 +1,7 @@
 # Como se testa
 
 O ADF não tem emulador, e o Azurite não implementa o namespace hierárquico do ADLS Gen2 (D13).
-Por isso cada parte é validada pela ferramenta que a confere sem a nuvem, e o que só a Azure
+Por isso, cada parte é validada pela ferramenta que a confere sem a nuvem, e o que só a Azure
 confirma fica listado à parte.
 
 ## Na máquina e no CI
@@ -70,7 +70,7 @@ Os testes foram conferidos pelo avesso: ligar a chave compartilhada do lake ou d
 plano.
 
 As exceções do Checkov e do tflint estão no próprio recurso, cada uma com o motivo e a decisão
-que a justifica (quase todas o D12: endpoint privado, VNet gerenciada e Log Analytics ficam fora
+que a justifica (quase todas pela D12: endpoint privado, VNet gerenciada e Log Analytics ficam fora
 por custo).
 
 ## O substituto local do ADF
@@ -88,21 +88,21 @@ mesmo que vai para a Azure. Diferenças declaradas:
   padrão do dicionário (teste `test_um_mes_ruim_nao_impede_os_outros`);
 - o ForEach roda os meses em sequência. No ADF são lotes em paralelo, e cada mês só escreve nos
   próprios caminhos;
-- os tempos do relatório são desta máquina. A folga contra os 230 s que o ADF espera pela
-  resposta da Function (menos de 3 s no pior mês, medido aqui) se confirma na execução na Azure.
+- os tempos do relatório são desta máquina. A folga contra os 230 s que a Function tem para
+  responder por HTTP (menos de 3 s no pior mês, medido aqui) se confirma na execução na Azure.
 
 Limite: a tese é provada pela execução local da mesma lógica, nas mesmas pastas e com a mesma
 janela. A equivalência com o ADF executando só se confirma implantando.
 
 ## Só na Azure
 
-O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.md`](runbook.md):
+O que nenhum teste local confirma (o roteiro para conferir está em [`runbook.md`](runbook.md)):
 - O ADF executando: expressões, Copy de ZIP para Parquet com `preserveZipFileNameAsFolder = false`,
   ForEach com Execute Pipeline, `concurrency: 1` e os gatilhos (inclusive o nome do fuso de
   Brasília no gatilho). As expressões são avaliadas nos testes por um avaliador próprio
   ([`adf_expressao.py`](../tests/adf_expressao.py)), não pelo motor do ADF; ele avalia os dois
   ramos do `if`, como o ADF, mas a equivalência só se confirma executando. Inclui o `union` da
-  lista de meses com ela mesma tirando a repetição dentro da própria lista.
+  lista de meses com ela mesma, tirando a repetição dentro da própria lista.
 - Os tipos físicos que o Copy grava no Parquet: precisão e escala do `Decimal`, que a
   documentação não descreve, e o `Int64`. Se não forem os do dicionário, a reconciliação acusa
   pelo hash e vale o plano B (D2b).
@@ -119,7 +119,7 @@ O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.
 - O contorno do `AzureWebJobsStorage`: o provider 4.x grava essa configuração como string de
   conexão mesmo com identidade (issues 29693 e 33211 do `terraform-provider-azurerm`). O módulo
   a deixa vazia e usa `AzureWebJobsStorage__accountName` e `__credential`; conferir que o host
-  sobe e se o plano seguinte fica sem diferença.
+  sobe e que o plano seguinte fica sem diferença.
 - A condição do RBAC Administrator aceita pela Azure e recusando, de fato, um papel fora da lista
   e uma atribuição a usuário.
 - O orçamento criado com a data de início do mês e o aviso chegando por e-mail.
@@ -129,7 +129,7 @@ O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.
   com a identidade gerenciada (o rename por cima do arquivo vigente); o pacote subindo pelo
   build remoto do Flex Consumption.
 - O campo `functionKeys` da saída de `az functionapp keys list`, que o `funcao.sh` lê (a doc da
-  CLI não descreve o formato) e o papel do pipeline no cofre valendo a tempo (o script tenta de
+  CLI não descreve o formato), e o papel do pipeline no cofre valendo a tempo (o script tenta de
   novo por alguns minutos).
 - O Azure Pipelines com agente próprio, federação de identidade (o provider e o backend renovando
   o token pela service connection, com o ID dela em `AZURESUBSCRIPTION_SERVICE_CONNECTION_ID`,
@@ -140,6 +140,9 @@ O que nenhum teste local confirma, e o roteiro para conferir está em [`runbook.
 
 Premissas da fonte, conferidas ao longo da operação:
 - o dia da atualização semanal da CVM (observado duas vezes: sábados, 14/11/2026 e 21/11/2026,
-  quando setembro ganhou 95 linhas, ver [`dado.md`](dado.md#a-fonte-reescrevendo-o-passado-fato-observado));
+  quando setembro ganhou 95 linhas, ver
+  [`dado.md`](dado.md#a-fonte-reescrevendo-o-passado-fato-observado));
 - se o `ETag` do servidor da CVM fica igual quando o arquivo é regravado sem mudança (necessário
-  para a otimização futura do D3).
+  para a otimização futura da D3);
+- se o arquivo do mês novo já existe no primeiro dia útil, às 10:00 (se não existir, o Copy de M
+  falha e o pai termina com falha, ver D3).

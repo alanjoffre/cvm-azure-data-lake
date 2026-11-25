@@ -11,7 +11,7 @@ log="$raiz_repo/saida/adf-validar.log"
 mkdir -p "$raiz_repo/saida"
 
 # O pacote só usa o ID da fábrica como texto (no link da mensagem de erro e no nome do ARM): não
-# fala com a Azure, mas precisa de internet para baixar o validador (o hash vai para o log). Assinatura zerada de propósito; o nome real entra no deploy por factoryName.
+# fala com a Azure, mas precisa de internet para baixar o validador (o hash vai para o log). ID da assinatura zerado de propósito; o nome real entra no deploy por factoryName.
 fabrica="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-cvm-lake/providers/Microsoft.DataFactory/factories/adf-cvm-lake"
 
 rodar() {

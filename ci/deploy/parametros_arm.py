@@ -41,8 +41,11 @@ def gerar(saidas: dict[str, Any], parametros: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(valor, str) or not valor or MARCA in valor:
             raise ValueError(f"saída {saida} vazia ou de exemplo: {valor!r}")
         valores[parametro] = valor
-    return {"$schema": parametros["$schema"], "contentVersion": parametros["contentVersion"],
-            "parameters": {n: {"value": v} for n, v in valores.items()}}
+    return {
+        "$schema": parametros["$schema"],
+        "contentVersion": parametros["contentVersion"],
+        "parameters": {n: {"value": v} for n, v in valores.items()},
+    }
 
 
 def main(argv: list[str]) -> int:

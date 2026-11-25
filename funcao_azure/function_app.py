@@ -23,16 +23,21 @@ from cvm_lake.origem import OrigemHTTP
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
-# O HEAD na CVM tem de caber com folga nos 230 s que a atividade espera pela resposta.
+# O HEAD na CVM tem de caber com folga nos 230 s que a Function tem para responder por HTTP.
 TIMEOUT_CVM_S = 20.0
 
 
 def responder(etapa: str, req: func.HttpRequest) -> func.HttpResponse:
     with ArmazenamentoADLS.da_conta(os.environ["LAKE_CONTA"]) as arm:
-        status, corpo = tratar(etapa, req.get_body(), arm, Lake(arm.raiz),
-                               OrigemHTTP(timeout=TIMEOUT_CVM_S).cabecalhos)
-    return func.HttpResponse(json.dumps(corpo, ensure_ascii=False), status_code=status,
-                             mimetype="application/json", charset="utf-8")
+        status, corpo = tratar(
+            etapa, req.get_body(), arm, Lake(arm.raiz), OrigemHTTP(timeout=TIMEOUT_CVM_S).cabecalhos
+        )
+    return func.HttpResponse(
+        json.dumps(corpo, ensure_ascii=False),
+        status_code=status,
+        mimetype="application/json",
+        charset="utf-8",
+    )
 
 
 @app.route(route="validar", methods=["POST"])

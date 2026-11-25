@@ -1,7 +1,7 @@
 """Layout do lake (docs/arquitetura.md, seção 4).
 
 O mesmo layout vale para a pasta local e para o ADLS Gen2: só a raiz muda (``saida/lake`` ou o
-endpoint dfs da conta, ``https://<conta>.dfs.core.windows.net``). Na Azure cada camada é um
+endpoint dfs da conta, ``https://<conta>.dfs.core.windows.net``). Na Azure, cada camada é um
 container, o primeiro segmento depois da raiz (``funcao/adls.py``); aqui, uma subpasta. Os
 caminhos são montados como texto, sem ``pathlib``, para servir aos dois.
 """
@@ -39,8 +39,14 @@ class Lake:
     # bronze: o ZIP exatamente como veio, uma versão por carga (D5)
     def bronze_zip(self, competencia: str, carga: str) -> str:
         c, r = conferir_competencia(competencia), conferir_carga(carga)
-        return self._p("bronze", "cvm", "inf_diario", f"competencia={c}", f"carga={r}",
-                       f"inf_diario_fi_{c}.zip")
+        return self._p(
+            "bronze",
+            "cvm",
+            "inf_diario",
+            f"competencia={c}",
+            f"carga={r}",
+            f"inf_diario_fi_{c}.zip",
+        )
 
     def bronze_mes(self, competencia: str) -> str:
         c = conferir_competencia(competencia)
@@ -66,7 +72,7 @@ class Lake:
         c = conferir_competencia(competencia)
         return self._p("ouro", "cvm", "inf_diario_mensal", f"competencia={c}")
 
-    # controle: manifesto (carga vigente) e relatório de cada carga, um arquivo por mês
+    # controle: manifesto (carga vigente) e relatório de cada carga, numa pasta por mês
     def controle(self, competencia: str) -> str:
         c = conferir_competencia(competencia)
         return self._p("controle", "cvm", "inf_diario", f"competencia={c}")

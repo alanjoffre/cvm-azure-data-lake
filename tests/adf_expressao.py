@@ -50,8 +50,10 @@ class Contexto:
 
 # --- leitura -------------------------------------------------------------------------------
 
-_TOKEN = re.compile(r"\s*(?:(?P<num>-?\d+(?:\.\d+)?)|(?P<nome>[A-Za-z_]\w*)|'(?P<str>(?:[^']|'')*)'"
-                    r"|(?P<sinal>[().,\[\]]))")
+_TOKEN = re.compile(
+    r"\s*(?:(?P<num>-?\d+(?:\.\d+)?)|(?P<nome>[A-Za-z_]\w*)|'(?P<str>(?:[^']|'')*)'"
+    r"|(?P<sinal>[().,\[\]]))"
+)
 
 
 def _tokens(texto: str) -> list[tuple[str, str]]:
@@ -150,15 +152,18 @@ def funcoes_usadas(texto: str) -> set[str]:
 
 # --- data e hora ----------------------------------------------------------------------------
 
+
 def _data(texto: Any) -> datetime:
     if not isinstance(texto, str):
         raise ErroDeExpressao(f"esperado timestamp em texto, veio {texto!r}")
-    m = re.fullmatch(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,7}))?(Z|[+-]\d{2}:\d{2})?",
-                     texto)
+    m = re.fullmatch(
+        r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,7}))?(Z|[+-]\d{2}:\d{2})?", texto
+    )
     if not m:
         raise ErroDeExpressao(f"timestamp inválido: {texto!r}")
-    base = datetime.fromisoformat(m.group(1)).replace(microsecond=int((m.group(2) or "0")
-                                                                      .ljust(6, "0")[:6]))
+    base = datetime.fromisoformat(m.group(1)).replace(
+        microsecond=int((m.group(2) or "0").ljust(6, "0")[:6])
+    )
     if m.group(3) == "Z":
         return base.replace(tzinfo=UTC)
     if m.group(3):
@@ -195,6 +200,7 @@ def _texto(valor: Any) -> str:
 
 
 # --- funções --------------------------------------------------------------------------------
+
 
 def _if(_: Contexto, condicao: Any, sim: Any, nao: Any) -> Any:
     if not isinstance(condicao, bool):

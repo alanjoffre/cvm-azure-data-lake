@@ -22,6 +22,7 @@ USER_AGENT = "cvm-azure-data-lake/0.1"
 
 
 def nome_arquivo(competencia: str) -> str:
+    """Nome do ZIP do mês no portal da CVM (inf_diario_fi_AAAAMM.zip)."""
     return f"inf_diario_fi_{conferir_competencia(competencia)}.zip"
 
 
@@ -47,11 +48,18 @@ class Origem(Protocol):
     def baixar(self, competencia: str) -> Arquivo: ...
 
 
-def metadados_de(url: str, conteudo: bytes, etag: str | None,
-                 last_modified: str | None) -> Metadados:
-    return Metadados(url=url, etag=etag, last_modified=last_modified, bytes=len(conteudo),
-                     sha256_zip=hashlib.sha256(conteudo).hexdigest(),
-                     obtido_em=datetime.now(UTC).isoformat(timespec="seconds"))
+def metadados_de(
+    url: str, conteudo: bytes, etag: str | None, last_modified: str | None
+) -> Metadados:
+    """Metadados HTTP de um download (URL, ETag, Last-Modified), com o tamanho e o hash do ZIP."""
+    return Metadados(
+        url=url,
+        etag=etag,
+        last_modified=last_modified,
+        bytes=len(conteudo),
+        sha256_zip=hashlib.sha256(conteudo).hexdigest(),
+        obtido_em=datetime.now(UTC).isoformat(timespec="seconds"),
+    )
 
 
 class OrigemHTTP:
@@ -76,7 +84,7 @@ class OrigemHTTP:
     def cabecalhos(self, competencia: str) -> dict[str, Any]:
         """``HEAD`` na URL do mês: os metadados que o manifesto guarda, sem baixar o arquivo (D3).
 
-        Na Azure quem baixa é o Copy do ADF, que não expõe os cabeçalhos da resposta. A Function
+        Na Azure, quem baixa é o Copy do ADF, que não expõe os cabeçalhos da resposta. A Function
         faz o ``HEAD`` na reconciliação, minutos depois da cópia.
         """
         url = f"{self.url_base}/{nome_arquivo(competencia)}"
@@ -117,6 +125,6 @@ def guardar(arquivo: Arquivo, pasta: Path, competencia: str) -> Path:
     destino = pasta / nome_arquivo(competencia)
     destino.write_bytes(arquivo.conteudo)
     destino.with_suffix(".origem.json").write_text(
-        json.dumps(asdict(arquivo.metadados), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8")
+        json.dumps(asdict(arquivo.metadados), indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     return destino

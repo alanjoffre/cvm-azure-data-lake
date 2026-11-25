@@ -55,9 +55,11 @@ def test_carga_invalida(carga: str) -> None:
 
 
 def test_mesmo_layout_para_pasta_e_adls() -> None:
-    adls = Lake("abfss://lake@conta.dfs.core.windows.net/")
-    assert adls.prata("202610") == \
-        "abfss://lake@conta.dfs.core.windows.net/prata/cvm/inf_diario/competencia=202610"
+    adls = Lake("https://conta.dfs.core.windows.net/")
+    assert (
+        adls.prata("202610")
+        == "https://conta.dfs.core.windows.net/prata/cvm/inf_diario/competencia=202610"
+    )
 
 
 # --- republicação simulada ----------------------------------------------------------------------

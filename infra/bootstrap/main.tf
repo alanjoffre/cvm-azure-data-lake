@@ -23,10 +23,10 @@ locals {
   # Condição do RBAC Administrator (Microsoft Learn, "Delegate Azure role assignment management
   # to others with conditions"). Duas metades, uma para criar e outra para remover:
   # - criar (write) só com um papel da lista e só para ServicePrincipal (@Request: o que se pede);
-  # - remover (delete) só atribuição que tenha um papel da lista e seja de ServicePrincipal
+  # - remover (delete) só a atribuição que tenha um papel da lista e seja de ServicePrincipal
   #   (@Resource: o que já existe). Sem a metade do delete, o destroy não removeria as
   #   atribuições; com ela, o pipeline não remove a atribuição de uma pessoa.
-  # Assim o pipeline não se dá Owner, não dá papel a usuário nem a grupo, e não atribui nada
+  # Assim, o pipeline não se dá Owner, não dá papel a usuário nem a grupo, e não atribui nada
   # fora da lista que o módulo usa.
   lista_guids = join(", ", sort(values(local.papeis)))
   condicao    = <<-EOT
@@ -111,7 +111,7 @@ resource "azurerm_storage_account" "estado" {
   }
 
   # O estado de dev e prod mora aqui. Nenhum plan pode apagar esta conta; para encerrar tudo,
-  # o runbook (passo 12) remove esta linha depois do destroy dos ambientes.
+  # o runbook (passo 12) remove o prevent_destroy abaixo depois do destroy dos ambientes.
   lifecycle {
     prevent_destroy = true
   }

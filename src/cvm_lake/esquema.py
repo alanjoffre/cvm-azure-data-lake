@@ -1,6 +1,6 @@
 """Dicionário do Informe Diário e a forma canônica usada no hash (D4, D7).
 
-Tudo que define "o mesmo dado" mora aqui: os tipos do dicionário da CVM, a chave natural e o
+Tudo o que define "o mesmo dado" mora aqui: os tipos do dicionário da CVM, a chave natural e o
 texto canônico de cada linha. A bronze (CSV) e a prata (Parquet) passam pelo mesmo SQL, então o
 hash não depende do formato do arquivo, só do conteúdo.
 
@@ -16,7 +16,7 @@ from dataclasses import dataclass
 class Coluna:
     nome: str
     tipo: str  # tipo DuckDB equivalente ao do dicionário da CVM
-    # Regex que o texto do CSV precisa casar por inteiro. Serve para recusar um valor que o CAST
+    # Regex com que o texto do CSV precisa casar por inteiro. Serve para recusar um valor que o CAST
     # aceitaria arredondando (ex.: 3 casas num campo de escala 2), o que esconderia uma perda.
     # Nos campos de texto, "|" e "\" ficam proibidos: são o separador e o nulo da forma
     # canônica, e permiti-los tornaria duas linhas diferentes iguais no hash.
@@ -47,7 +47,7 @@ COLUNAS: tuple[Coluna, ...] = (
 
 NOMES: tuple[str, ...] = tuple(c.nome for c in COLUNAS)
 
-# D4: desde a Resolução CVM 175 a subclasse faz parte da chave. Subclasse vazia é um valor.
+# D4: desde a Resolução CVM 175, a subclasse faz parte da chave. Subclasse vazia é um valor.
 CHAVE: tuple[str, ...] = ("CNPJ_FUNDO_CLASSE", "ID_SUBCLASSE", "DT_COMPTC")
 
 # Formato físico do CSV da CVM (conferido em 24/11/2026 nos meses 2026-09 a 2026-11).
@@ -93,8 +93,7 @@ def sql_linha_canonica(alias: str = "t") -> str:
     for c in COLUNAS:
         col = f"{alias}.{_q(c.nome)}"
         # DECIMAL(p,s) → VARCHAR no DuckDB sai sempre com s casas; inteiro sai sem zeros.
-        texto = (f"strftime({col}, '%Y-%m-%d')" if c.tipo == "DATE"
-                 else f"CAST({col} AS VARCHAR)")
+        texto = f"strftime({col}, '%Y-%m-%d')" if c.tipo == "DATE" else f"CAST({col} AS VARCHAR)"
         campos.append(f"COALESCE(NULLIF({texto}, ''), '{NULO_CANONICO}')")
     return f" || '{SEPARADOR_CANONICO}' || ".join(campos)
 
@@ -132,12 +131,14 @@ def sql_fora_da_competencia(tabela_tipada: str, competencia: str) -> str:
     """
     if not (len(competencia) == 6 and competencia.isascii() and competencia.isdigit()):
         raise ValueError(f"competência inválida: {competencia!r}")
-    return (f"SELECT count(*) FROM {tabela_tipada} "
-            f"WHERE strftime({_q('DT_COMPTC')}, '%Y%m') <> '{competencia}'")
+    return (
+        f"SELECT count(*) FROM {tabela_tipada} "
+        f"WHERE strftime({_q('DT_COMPTC')}, '%Y%m') <> '{competencia}'"
+    )
 
 
 def sql_fora_do_dicionario(tabela_texto: str) -> str:
-    """Conta, no CSV ainda em texto, os valores que não casam com o padrão do dicionário."""
+    """Conta as linhas do CSV, ainda em texto, com algum valor fora do padrão do dicionário."""
     condicoes = []
     for c in COLUNAS:
         col = f"coalesce({_q(c.nome)}, '')"

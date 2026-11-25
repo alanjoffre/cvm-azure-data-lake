@@ -57,7 +57,7 @@ for tentativa in 1 2 3 4 5; do
     echo "gravado"
     exit 0
   fi
-  echo "tentativa $tentativa falhou; nova em ${ESPERA_RBAC_S:-60}s" >&2
+  echo "tentativa $tentativa falhou; nova tentativa em ${ESPERA_RBAC_S:-60} s" >&2
   sleep "${ESPERA_RBAC_S:-60}"
 done
 exit 1

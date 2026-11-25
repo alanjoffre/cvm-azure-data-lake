@@ -84,9 +84,12 @@ def gerar_t1(zip_t0: bytes, semente: int = 175, alterar: int = 3) -> tuple[bytes
         raise ValueError("nenhum fundo sem informe em algum dia do mês: não há o que incluir")
 
     novo_corpo = [c for j, c in enumerate(corpo) if j != a_remover] + [incluida_campos]
-    novo_texto = esquema.CSV_FIM_DE_LINHA.join(
-        [cabecalho, *(esquema.CSV_DELIMITADOR.join(c) for c in novo_corpo)]
-    ) + esquema.CSV_FIM_DE_LINHA
+    novo_texto = (
+        esquema.CSV_FIM_DE_LINHA.join(
+            [cabecalho, *(esquema.CSV_DELIMITADOR.join(c) for c in novo_corpo)]
+        )
+        + esquema.CSV_FIM_DE_LINHA
+    )
 
     saida = io.BytesIO()
     with zipfile.ZipFile(saida, "w", compression=zipfile.ZIP_DEFLATED) as arquivo:

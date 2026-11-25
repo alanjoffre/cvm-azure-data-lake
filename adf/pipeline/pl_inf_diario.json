@@ -59,7 +59,7 @@
                     }
                 ],
                 "userProperties": [],
-                "description": "Lotes de 4 meses em paralelo; cada mês grava só nos próprios caminhos. A expressão do mês é total nos dois modos: o if interno entrega 0 ao subtractFromTime quando o item é um AAAAMM da lista. Um mês que falha não para os outros; o pai termina como falho.",
+                "description": "Lotes de 4 meses em paralelo; cada mês grava só nos próprios caminhos. A expressão do mês é total nos dois modos: o if interno entrega 0 ao subtractFromTime quando o item é um AAAAMM da lista. Um mês que falha não interrompe os outros; o pai termina com falha.",
                 "typeProperties": {
                     "items": {
                         "value": "@variables('meses')",

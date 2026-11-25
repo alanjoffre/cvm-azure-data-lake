@@ -47,8 +47,9 @@ def requisitos() -> str:
     return str(empacotar.requisitos())
 
 
-def test_pacote_tem_o_layout_do_python_na_raiz_e_so_o_codigo(tmp_path: Path,
-                                                               requisitos: str) -> None:
+def test_pacote_tem_o_layout_do_python_na_raiz_e_so_o_codigo(
+    tmp_path: Path, requisitos: str
+) -> None:
     sha = empacotar.empacotar(RAIZ, tmp_path / "f.zip", requisitos)
     nomes = zipfile.ZipFile(tmp_path / "f.zip").namelist()
     assert {"function_app.py", "host.json", "requirements.txt"} <= set(nomes)
@@ -66,18 +67,23 @@ def test_requirements_sai_do_lock_com_hash_e_inclui_o_sdk(requisitos: str) -> No
     assert not {"pytest", "ruff", "mypy"} & pacotes
     assert "--hash=sha256:" in requisitos
     # O projeto vai como código no zip, não como linha do requirements (só aparece em "# via").
-    assert not [x for x in requisitos.splitlines() if x.startswith(("-e", ".", "adf-adls"))]
+    assert not [
+        x for x in requisitos.splitlines() if x.startswith(("-e", ".", "cvm-azure-data-lake"))
+    ]
 
 
 def test_function_app_importa_do_pacote_extraido(tmp_path: Path, requisitos: str) -> None:
     empacotar.empacotar(RAIZ, tmp_path / "f.zip", requisitos)
     pasta = tmp_path / "wwwroot"
     zipfile.ZipFile(tmp_path / "f.zip").extractall(pasta)
-    codigo = ("import function_app, cvm_lake; "
-              "print(cvm_lake.__file__); "
-              "print(sorted(f.get_function_name() for f in function_app.app.get_functions()))")
-    saida = subprocess.run([sys.executable, "-c", codigo], cwd=pasta, check=True,
-                           capture_output=True, text=True).stdout.splitlines()
+    codigo = (
+        "import function_app, cvm_lake; "
+        "print(cvm_lake.__file__); "
+        "print(sorted(f.get_function_name() for f in function_app.app.get_functions()))"
+    )
+    saida = subprocess.run(
+        [sys.executable, "-c", codigo], cwd=pasta, check=True, capture_output=True, text=True
+    ).stdout.splitlines()
     assert saida[0].startswith(str(pasta))
     assert saida[1] == "['reconciliar', 'validar']"
 
@@ -90,13 +96,15 @@ def _parametros_exemplo() -> dict[str, Any]:
         "factoryName": "adf-cvm-lake",
         "ls_adls_lake_properties_typeProperties_url": "https://lake.definido-no-deploy.invalid/",
         "ls_kv_properties_typeProperties_baseUrl": "https://kv.definido-no-deploy.invalid/",
-        "ls_funcao_properties_typeProperties_functionAppUrl":
-            "https://funcao.definido-no-deploy.invalid",
+        "ls_funcao_properties_typeProperties_functionAppUrl": "https://funcao.definido-no-deploy.invalid",
         "ls_http_cvm_properties_typeProperties_url": "https://dados.cvm.gov.br/",
         "tr_diario_properties_pl_inf_diario_parameters_de": 0,
     }
-    return {"$schema": "https://schema/deploymentParameters.json#", "contentVersion": "1.0.0.0",
-            "parameters": {n: {"value": v} for n, v in valores.items()}}
+    return {
+        "$schema": "https://schema/deploymentParameters.json#",
+        "contentVersion": "1.0.0.0",
+        "parameters": {n: {"value": v} for n, v in valores.items()},
+    }
 
 
 SAIDAS = {
@@ -120,8 +128,11 @@ def test_troca_os_enderecos_e_mantem_o_resto() -> None:
     gerado = parametros_arm.gerar(SAIDAS, _parametros_exemplo())["parameters"]
     assert gerado["factoryName"] == {"value": "adf-cvm-lake-dev-x1"}
     assert gerado["ls_funcao_properties_typeProperties_functionAppUrl"]["value"] == (
-        "https://func-cvm-dev-x1.azurewebsites.net")
-    assert gerado["ls_http_cvm_properties_typeProperties_url"]["value"] == "https://dados.cvm.gov.br/"
+        "https://func-cvm-dev-x1.azurewebsites.net"
+    )
+    assert (
+        gerado["ls_http_cvm_properties_typeProperties_url"]["value"] == "https://dados.cvm.gov.br/"
+    )
     assert gerado["tr_diario_properties_pl_inf_diario_parameters_de"]["value"] == 0
     assert ".invalid" not in json.dumps(gerado)
 
@@ -129,12 +140,14 @@ def test_troca_os_enderecos_e_mantem_o_resto() -> None:
 def test_endereco_novo_sem_saida_falha_antes_da_azure() -> None:
     parametros = _parametros_exemplo()
     parametros["parameters"]["ls_novo_properties_typeProperties_url"] = {
-        "value": "https://novo.definido-no-deploy.invalid"}
+        "value": "https://novo.definido-no-deploy.invalid"
+    }
     with pytest.raises(ValueError, match="ls_novo"):
         parametros_arm.gerar(SAIDAS, parametros)
     with pytest.raises(ValueError, match="funcao_host"):
-        parametros_arm.gerar({k: v for k, v in SAIDAS.items() if k != "funcao_host"},
-                             _parametros_exemplo())
+        parametros_arm.gerar(
+            {k: v for k, v in SAIDAS.items() if k != "funcao_host"}, _parametros_exemplo()
+        )
     with pytest.raises(ValueError, match="vazia ou de exemplo"):
         parametros_arm.gerar(SAIDAS | {"adf_nome": {"value": ""}}, _parametros_exemplo())
 
@@ -152,8 +165,11 @@ GATILHOS = sorted(p.stem for p in (RAIZ / "adf/trigger").glob("*.json"))
 
 def _chamadas_do_script() -> list[str]:
     """Os ScriptArguments das duas chamadas ao PrePostDeploymentScript.ps1."""
-    blocos = re.findall(r"ScriptPath: .*PrePostDeploymentScript\.ps1\n\s*ScriptArguments: >-\n"
-                        r"((?:\s{22}.*\n)+)", DEPLOY_YML)
+    blocos = re.findall(
+        r"ScriptPath: .*PrePostDeploymentScript\.ps1\n\s*ScriptArguments: >-\n"
+        r"((?:\s{22}.*\n)+)",
+        DEPLOY_YML,
+    )
     return [" ".join(b.split()) for b in blocos]
 
 
@@ -184,7 +200,8 @@ def test_variaveis_do_job_e_recusa_valor_que_injeta_comando() -> None:
         "##vso[task.setvariable variable=resource_group_name]rg-cvm-lake-dev",
         "##vso[task.setvariable variable=adf_nome]adf-cvm-lake-dev-x1",
         "##vso[task.setvariable variable=funcao_nome]func-cvm-dev-x1",
-        "##vso[task.setvariable variable=key_vault_nome]kv-cvm-dev-x1"]
+        "##vso[task.setvariable variable=key_vault_nome]kv-cvm-dev-x1",
+    ]
     with pytest.raises(ValueError):
         variaveis.linhas(SAIDAS | {"adf_nome": {"value": "x\n##vso[task.setvariable variable=y]z"}})
 
@@ -213,25 +230,42 @@ def _rodar_funcao_sh(falso: Path) -> subprocess.CompletedProcess[str]:
     bin_.mkdir(exist_ok=True)
     (bin_ / "az").write_text(AZ_FALSO)
     (bin_ / "az").chmod(0o755)
-    env = os.environ | {"PATH": f"{bin_}:{os.environ['PATH']}", "FALSO": str(falso),
-                        "ESPERA_RBAC_S": "0"}
-    return subprocess.run(["bash", str(RAIZ / "ci/deploy/funcao.sh"), "rg-cvm-lake-dev",
-                           "func-x", "kv-x", "/tmp/funcao.zip"],
-                          env=env, capture_output=True, text=True, check=True)
+    env = os.environ | {
+        "PATH": f"{bin_}:{os.environ['PATH']}",
+        "FALSO": str(falso),
+        "ESPERA_RBAC_S": "0",
+    }
+    return subprocess.run(
+        [
+            "bash",
+            str(RAIZ / "ci/deploy/funcao.sh"),
+            "rg-cvm-lake-dev",
+            "func-x",
+            "kv-x",
+            "/tmp/funcao.zip",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
 
 def test_funcao_sh_publica_cria_a_chave_e_grava_o_segredo_sem_expor(tmp_path: Path) -> None:
     primeira = _rodar_funcao_sh(tmp_path)
     chamadas = (tmp_path / "chamadas").read_text()
     assert "--build-remote true" in chamadas and "--src /tmp/funcao.zip" in chamadas
-    assert "keys set --resource-group rg-cvm-lake-dev --name func-x --key-type functionKeys" \
+    assert (
+        "keys set --resource-group rg-cvm-lake-dev --name func-x --key-type functionKeys"
         " --key-name adf" in chamadas
+    )
     assert "--query functionKeys.adf" in chamadas
     assert (tmp_path / "segredo").read_text() == "S3GR3D0-da-funcao"
     # O valor nunca vai na linha de comando; na saída, só na linha que o mascara no pipeline.
     assert "S3GR3D0" not in chamadas
-    linhas_com_valor = [x for x in (primeira.stdout + primeira.stderr).splitlines()
-                        if "S3GR3D0" in x]
+    linhas_com_valor = [
+        x for x in (primeira.stdout + primeira.stderr).splitlines() if "S3GR3D0" in x
+    ]
     assert linhas_com_valor == ["##vso[task.setsecret]S3GR3D0-da-funcao"]
     assert "criada" in primeira.stdout and "gravado" in primeira.stdout
 
@@ -266,22 +300,34 @@ def ambiente_tf(tmp_path: Path) -> dict[str, str]:
     (bin_ / "az").write_text("#!/usr/bin/env bash\necho 00000000-sub\n")
     for f in bin_.iterdir():
         f.chmod(0o755)
-    return {"PATH": f"{bin_}:/usr/bin:/bin", "FALSO": str(tmp_path), "HOME": str(tmp_path),
-            "TF_ESTADO_RG": "rg-estado", "TF_ESTADO_CONTA": "stestado",
-            "TF_ESTADO_CONTAINER": "tfstate",
-            "servicePrincipalId": "cliente-sc", "tenantId": "tenant-sc",
-            "AZURESUBSCRIPTION_SERVICE_CONNECTION_ID": "id-da-sc",
-            "SYSTEM_ACCESSTOKEN": "token", "SYSTEM_OIDCREQUESTURI": "https://oidc",
-            "TF_VAR_emails_alerta": '["a@example.com"]'}
+    return {
+        "PATH": f"{bin_}:/usr/bin:/bin",
+        "FALSO": str(tmp_path),
+        "HOME": str(tmp_path),
+        "TF_ESTADO_RG": "rg-estado",
+        "TF_ESTADO_CONTA": "stestado",
+        "TF_ESTADO_CONTAINER": "tfstate",
+        "servicePrincipalId": "cliente-sc",
+        "tenantId": "tenant-sc",
+        "AZURESUBSCRIPTION_SERVICE_CONNECTION_ID": "id-da-sc",
+        "SYSTEM_ACCESSTOKEN": "token",
+        "SYSTEM_OIDCREQUESTURI": "https://oidc",
+        "TF_VAR_emails_alerta": '["a@example.com"]',
+    }
 
 
 def _tf(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["bash", str(RAIZ / "ci/deploy/terraform.sh"), *args], env=env,
-                          capture_output=True, text=True)
+    return subprocess.run(
+        ["bash", str(RAIZ / "ci/deploy/terraform.sh"), *args],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
 
 
-def test_terraform_sh_planeja_com_o_estado_do_ambiente_e_oidc(tmp_path: Path,
-                                                               ambiente_tf: dict[str, str]) -> None:
+def test_terraform_sh_planeja_com_o_estado_do_ambiente_e_oidc(
+    tmp_path: Path, ambiente_tf: dict[str, str]
+) -> None:
     r = _tf(["plano", "prod", str(tmp_path / "p" / "prod.tfplan")], ambiente_tf)
     assert r.returncode == 0, r.stderr
     init, plan = (tmp_path / "chamadas").read_text().splitlines()
@@ -292,26 +338,31 @@ def test_terraform_sh_planeja_com_o_estado_do_ambiente_e_oidc(tmp_path: Path,
     assert (tmp_path / "p" / "prod.tfplan").exists()
 
 
-def test_terraform_sh_aplica_o_plano_salvo_e_grava_as_saidas(tmp_path: Path,
-                                                              ambiente_tf: dict[str, str]) -> None:
+def test_terraform_sh_aplica_o_plano_salvo_e_grava_as_saidas(
+    tmp_path: Path, ambiente_tf: dict[str, str]
+) -> None:
     plano = tmp_path / "dev.tfplan"
     r = _tf(["aplicar", "dev", str(plano), str(tmp_path / "s" / "saidas.json")], ambiente_tf)
     assert r.returncode == 0, r.stderr
     chamadas = (tmp_path / "chamadas").read_text().splitlines()
     assert chamadas[1].startswith(f"apply -no-color {plano} |")  # sem -var-file: o plano já traz
     assert json.loads((tmp_path / "s" / "saidas.json").read_text()) == {
-        "adf_nome": {"value": "adf-x"}}
+        "adf_nome": {"value": "adf-x"}
+    }
 
 
-@pytest.mark.parametrize("args", [[], ["plano", "hml", "x"], ["aplicar", "dev", "x"],
-                                  ["destruir", "dev", "x"]])
-def test_terraform_sh_recusa_acao_ou_ambiente_fora_da_lista(args: list[str],
-                                                            ambiente_tf: dict[str, str]) -> None:
+@pytest.mark.parametrize(
+    "args", [[], ["plano", "hml", "x"], ["aplicar", "dev", "x"], ["destruir", "dev", "x"]]
+)
+def test_terraform_sh_recusa_acao_ou_ambiente_fora_da_lista(
+    args: list[str], ambiente_tf: dict[str, str]
+) -> None:
     assert _tf(args, ambiente_tf).returncode == 2
 
 
 def test_terraform_sh_sem_token_do_pipeline_nao_chega_ao_terraform(
-        tmp_path: Path, ambiente_tf: dict[str, str]) -> None:
+    tmp_path: Path, ambiente_tf: dict[str, str]
+) -> None:
     env = {k: v for k, v in ambiente_tf.items() if k != "SYSTEM_ACCESSTOKEN"}
     r = _tf(["plano", "dev", str(tmp_path / "dev.tfplan")], env)
     assert r.returncode != 0 and "System.AccessToken" in r.stderr

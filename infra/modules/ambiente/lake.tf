@@ -18,7 +18,7 @@ resource "azurerm_storage_account" "lake" {
   account_replication_type = "LRS"
 
   # Namespace hierárquico: é o que faz da conta um ADLS Gen2 (pastas de verdade e rename
-  # atômico, que a troca de partição da prata usa).
+  # atômico, que a Function usa para regravar o manifesto e o ouro sem truncar o arquivo vigente).
   is_hns_enabled = true
 
   # Sem chave compartilhada: só identidade (Entra ID) acessa o dado. O provider também
@@ -44,7 +44,7 @@ resource "azurerm_storage_account" "lake" {
   tags = local.tags
 }
 
-# Um container por camada. Criado pelo plano de controle (storage_account_id), sem passar pelo
+# Um container por camada. Cada um é criado pelo plano de controle (storage_account_id), sem passar pelo
 # plano de dados: funciona com a chave compartilhada desligada.
 # tflint-ignore: azurerm_resources_missing_prevent_destroy # o destroy encerra o ambiente inteiro (D8); o dado se baixa de novo da CVM
 resource "azurerm_storage_container" "camada" {

@@ -66,8 +66,9 @@ terraform -chdir=infra/bootstrap output backend_config   # vai para o grupo de v
 ```
 
 O estado do bootstrap fica local, em `infra/bootstrap/terraform.tfstate`, fora do Git
-(`.gitignore`). Ele não tem segredo, mas guardar uma cópia permite o destroy do passo 12.
-Guardar também o `APP_ID`: o passo 4 usa.
+(`.gitignore`). Ele não guarda senha de aplicação, mas o provider grava atributos sensíveis da
+conta: guardar como confidencial. A cópia também permite o destroy do passo 12. Guardar também o
+`APP_ID`: o passo 4 o usa.
 
 ## 2. Organização, projeto e pipeline no Azure DevOps
 
@@ -102,7 +103,7 @@ Guardar também o `APP_ID`: o passo 4 usa.
    | Terraform | 1.11.2 ou mais nova | o backend renova o token OIDC do Azure DevOps |
    | tflint | atual | `infra/validar.sh` |
    | Azure CLI | atual | tasks `AzureCLI@2` e `funcao.sh` (o `config-zip` com build remoto no Flex Consumption) |
-   | PowerShell | 7 (`pwsh`) | arm-ttk e o pré e pós-script do ADF |
+   | PowerShell | 7 (`pwsh`) | arm-ttk e o pré-script e o pós-script do ADF |
    | módulo Az do PowerShell | atual | `AzurePowerShell@5` (`Install-Module Az -Scope CurrentUser`) |
 
 3. Baixar o agente em *Agent pools* > `cvm-lake` > *New agent* > *Linux*, e configurar com um
@@ -201,9 +202,9 @@ provider e o backend leem: `ARM_USE_OIDC=true`, `ARM_CLIENT_ID`, `ARM_TENANT_ID`
 `SYSTEM_OIDCREQUESTURI` mapeados no `env`. Assim o token se renova durante um apply longo. Sem o
 token mapeado, o script para com a mensagem do que falta.
 
-Para depurar fora do pipeline, com `az login` de quem tem acesso ao estado (passo 12). Fora do
-pipeline, só `plan`: o papel do cofre vai para a identidade que roda o Terraform, e o plano
-mostra a troca dele para o seu usuário, que não deve ser aplicada.
+Para depurar fora do pipeline, entrar com `az login` como alguém que tem acesso ao estado (passo
+12). Fora do pipeline, só `plan`: o papel do cofre vai para a identidade que roda o Terraform, e o
+plano mostra a troca dele para o seu usuário, que não deve ser aplicada.
 
 ```bash
 terraform -chdir=infra init \
@@ -225,7 +226,7 @@ Ainda no estágio **Deploy dev**, depois do apply:
 |---|---|---|
 | 1 | [`ci/deploy/funcao.sh`](../ci/deploy/funcao.sh): `az functionapp deployment source config-zip --build-remote true` com o `funcao.zip` | o Flex Consumption instala o `requirements.txt` no build remoto; o zip tem `function_app.py`, `host.json` e o pacote na raiz |
 | 2 | o mesmo script cria a chave de host `adf` (a Azure gera o valor) e a grava no cofre como `funcao-chave-adf` | o linked service da Function lê a chave no cofre; o valor não passa pelo estado do Terraform nem pelo log (`##vso[task.setsecret]`) |
-| 3 | pré-script do ADF (`PrePostDeploymentScript.ps1`, gerado com o ARM, `-predeployment $true`), com `-ExplicitStopTriggerList tr_diario,tr_semanal` e `-ArmTemplateParameters` deste ambiente | para os dois gatilhos; sozinho, o script só para os que mudaram |
+| 3 | pré-script do ADF (`PrePostDeploymentScript.ps1`, gerado com o ARM, `-predeployment $true`), com `-ExplicitStopTriggerList tr_diario,tr_semanal` e `-ArmTemplateParameters` deste ambiente | interrompe os dois gatilhos; sozinho, o script só interrompe os que mudaram |
 | 4 | `az deployment group create --mode Incremental` com o ARM e os parâmetros das saídas | o modo `Complete` apagaria do resource group o que não está no template, inclusive o lake e a Function |
 | 5 | pós-script (`-predeployment $false -deleteDeployment $true`) | apaga do ADF o que saiu do JSON e religa os gatilhos com `runtimeState` `Started` |
 
@@ -235,7 +236,7 @@ conferir em *Monitor* que nenhuma carga está rodando. Corrigir e rodar de novo;
 idempotente.
 
 **Na primeira vez**, o papel `Key Vault Secrets Officer` do pipeline nasce no mesmo apply, e a
-Azure leva alguns minutos para valer a atribuição. O `funcao.sh` tenta gravar o segredo 5 vezes,
+Azure leva alguns minutos para a atribuição valer. O `funcao.sh` tenta gravar o segredo 5 vezes,
 com 60 s entre elas. Se ainda assim falhar, rodar de novo o estágio (*Rerun failed jobs*). Numa
 segunda execução com a mesma chave, o script vê que o segredo é igual e não grava versão nova.
 
@@ -304,7 +305,7 @@ Depois do **Deploy dev** verde, a mesma execução segue:
 1. **Plano prod** roda sozinho e publica `plano_prod`. Quem aprova lê o log da task
    `terraform plan` desse estágio: o que será criado, alterado ou destruído.
 2. **Deploy prod** fica esperando a aprovação no environment `cvm-lake-prod`. Aprovar só se o
-   plano é o esperado. Rejeitar ou deixar vencer o prazo encerra a execução sem tocar em prod.
+   plano for o esperado. Rejeitar ou deixar vencer o prazo encerra a execução sem tocar em prod.
 3. Aprovado, o estágio aplica o plano publicado e faz a mesma sequência do passo 7 com os
    mesmos artefatos `arm` e `funcao` de dev: prod recebe o que passou em dev, sem rebuild.
 4. Fazer a carga inicial do passo 8 em prod, com `RG=rg-cvm-lake-prod`.
@@ -336,7 +337,7 @@ apagar o estado por engano: tirar as duas linhas `prevent_destroy = true` de
 Conferir:
 - `az resource list --query "[?tags.projeto=='cvm-lake']"` vazio;
 - o Key Vault apagado fica 7 dias em soft delete, sem custo;
-- no Azure DevOps, apagar a service connection, o pool e o agente, e no Entra ID o aplicativo
+- no Azure DevOps, apagar a service connection, o pool e o agente e, no Entra ID, o aplicativo
   `sp-cvm-lake-pipeline`;
 - em *Cost Management* > *Cost analysis*, no dia seguinte, o custo do período por serviço. O
   custo aparece com atraso de horas.

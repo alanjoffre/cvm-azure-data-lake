@@ -39,6 +39,6 @@ output "papeis_atribuidos" {
 }
 
 output "resource_group_name" {
-  description = "Resource group do ambiente (o deploy do ARM e da Function)."
+  description = "Resource group do ambiente (alvo do deploy do ARM e da Function)."
   value       = var.resource_group_name
 }

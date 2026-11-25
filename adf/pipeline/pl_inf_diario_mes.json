@@ -1,7 +1,7 @@
 {
     "name": "pl_inf_diario_mes",
     "properties": {
-        "description": "Um mês de competência, os 7 passos de docs/adf.md. Pode ser executado sozinho para reprocessar um mês.",
+        "description": "Um mês de competência, os 7 passos de docs/adf.md. Reprocessar é pelo pai (pl_inf_diario, parâmetro competencias): disparado sozinho, o filho fura a fila do pai (concurrency 1, D6).",
         "activities": [
             {
                 "name": "copiar_origem_para_bronze",
@@ -74,7 +74,7 @@
                     }
                 ],
                 "userProperties": [],
-                "description": "Passo 2. ZIP da bronze → CSV → Parquet na staging, sem Data Flow. preserveZipFileNameAsFolder=false: sem isso o Copy cria uma subpasta com o nome do ZIP. Tipos: decimal e inteiro pelo dicionário; a data fica texto ISO, porque o Copy não tem tipo de data sem hora (Datetime viraria INT96 no Parquet). allowDataTruncation=false: valor que não cabe derruba a cópia em vez de arredondar. A Function confere o resultado no passo 3 (D2b).",
+                "description": "Passo 2. ZIP da bronze → CSV → Parquet na staging, sem Data Flow. preserveZipFileNameAsFolder=false: sem isso, o Copy cria uma subpasta com o nome do ZIP. Tipos: decimal e inteiro pelo dicionário; a data fica como texto ISO, porque o Copy não tem tipo de data sem hora (Datetime viraria INT96 no Parquet). allowDataTruncation=false: valor que não cabe derruba a cópia em vez de arredondar. A Function confere o resultado no passo 3 (D2b).",
                 "policy": {
                     "timeout": "0.00:10:00",
                     "retry": 2,
@@ -247,7 +247,7 @@
             },
             {
                 "name": "validar_staging",
-                "description": "Passo 3. A Function confere bronze × staging: contagem, SHA-256 canônico e chave única (D7). Sem retentativa: a resposta é determinística, e repetir não muda o resultado. Responde em até 230 s, o limite da atividade.",
+                "description": "Passo 3. A Function confere bronze × staging: contagem, SHA-256 canônico e chave única (D7). Sem retentativa: a resposta é determinística, e repetir não muda o resultado. Responde em até 230 s, o limite de uma Function disparada por HTTP.",
                 "type": "AzureFunctionActivity",
                 "dependsOn": [
                     {
@@ -280,7 +280,7 @@
             },
             {
                 "name": "validacao_ok",
-                "description": "Se a Function responde ok=false, a atividade Fail derruba a carga aqui: a prata não foi tocada (D6). Não depende de como a atividade trata o status HTTP.",
+                "description": "Se a Function responder ok=false, a atividade Fail derruba a carga aqui: a prata não foi tocada (D6). Não depende de como a atividade trata o status HTTP.",
                 "type": "IfCondition",
                 "dependsOn": [
                     {
@@ -325,7 +325,7 @@
                     }
                 ],
                 "userProperties": [],
-                "description": "Na primeira carga do mês a partição não existe. Com 'exists' na lista, a atividade responde false em vez de falhar.",
+                "description": "Na primeira carga do mês, a partição não existe. Com 'exists' na lista, a atividade responde false em vez de falhar.",
                 "policy": {
                     "timeout": "0.00:05:00",
                     "retry": 2,

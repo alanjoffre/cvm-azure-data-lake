@@ -26,9 +26,22 @@ DATA_FIXA = (1980, 1, 1, 0, 0, 0)
 
 def requisitos() -> str:
     return subprocess.run(
-        ["uv", "export", "--frozen", "--no-dev", "--extra", "azure", "--no-emit-project",
-         "--no-header", "--quiet"],
-        cwd=RAIZ, check=True, capture_output=True, text=True).stdout
+        [
+            "uv",
+            "export",
+            "--frozen",
+            "--no-dev",
+            "--extra",
+            "azure",
+            "--no-emit-project",
+            "--no-header",
+            "--quiet",
+        ],
+        cwd=RAIZ,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
 
 
 def arquivos(raiz: Path) -> dict[str, bytes]:
@@ -39,8 +52,11 @@ def arquivos(raiz: Path) -> dict[str, bytes]:
     }
     pacote = raiz / "src" / "cvm_lake"
     for arquivo in sorted(pacote.rglob("*")):
-        if arquivo.is_file() and "__pycache__" not in arquivo.parts and arquivo.suffix in {
-                ".py", ".sql", ".typed"}:
+        if (
+            arquivo.is_file()
+            and "__pycache__" not in arquivo.parts
+            and arquivo.suffix in {".py", ".sql", ".typed"}
+        ):
             conteudo[f"cvm_lake/{arquivo.relative_to(pacote).as_posix()}"] = arquivo.read_bytes()
     return conteudo
 

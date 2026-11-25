@@ -1,13 +1,13 @@
 # Key Vault só para o que é segredo (D11): a chave da Function que o ADF usa para chamá-la.
 #
 # O segredo NÃO é criado aqui. A chave da Function só existe depois que o código é publicado, e
-# um segredo criado pelo Terraform ficaria gravado em texto no estado. A etapa de deploy
-# cria a chave na Function e grava no cofre com a CLI, com o papel Key Vault Secrets Officer
+# um segredo criado pelo Terraform ficaria gravado em texto claro no estado. A etapa de deploy
+# cria a chave na Function e a grava no cofre com a CLI, com o papel Key Vault Secrets Officer
 # atribuído em rbac.tf. O estado guarda só o cofre.
 
 # tflint-ignore: azurerm_resources_missing_prevent_destroy # o destroy encerra o ambiente inteiro (D8); a chave se grava de novo no deploy
 resource "azurerm_key_vault" "kv" {
-  #checkov:skip=CKV_AZURE_110: purge protection desligada; com ela o cofre ficaria 7+ dias sem poder ser apagado e o destroy do ambiente de teste não fecharia (D8).
+  #checkov:skip=CKV_AZURE_110: purge protection desligada; com ela, o cofre ficaria 7+ dias sem poder ser apagado e o destroy do ambiente de teste não fecharia (D8).
   #checkov:skip=CKV_AZURE_42: idem: soft delete de 7 dias fica, a proteção contra purga não.
   #checkov:skip=CKV_AZURE_109: rede pública com RBAC; endpoint privado fica fora por custo (D12).
   #checkov:skip=CKV_AZURE_189: idem CKV_AZURE_109.

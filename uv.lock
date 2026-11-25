@@ -486,7 +486,7 @@ requires-dist = [
     { name = "azure-functions", marker = "extra == 'azure'", specifier = ">=1.26.0" },
     { name = "azure-identity", marker = "extra == 'azure'", specifier = ">=1.27.0" },
     { name = "azure-storage-file-datalake", marker = "extra == 'azure'", specifier = ">=12.26.1" },
-    { name = "duckdb", specifier = ">=1.4" },
+    { name = "duckdb", specifier = ">=2.0" },
 ]
 provides-extras = ["azure"]
 

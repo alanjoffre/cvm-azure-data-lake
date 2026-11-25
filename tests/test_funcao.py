@@ -158,11 +158,14 @@ def test_falha_no_upload_deixa_a_versao_anterior(tmp_path: Path) -> None:
     caminho = f"{CONTA}/controle/cvm/inf_diario/competencia=202610/manifesto.json"
     with adls(tmp_path) as arm:
         arm.gravar_bytes(caminho, b'{"versao": 1}')
-    with adls(tmp_path, falha=ClientAuthenticationError("token vencido")) as arm, \
-            pytest.raises(OSError):
+    with (
+        adls(tmp_path, falha=ClientAuthenticationError("token vencido")) as arm,
+        pytest.raises(OSError),
+    ):
         arm.gravar_bytes(caminho, b'{"versao": 2}')
-    assert (tmp_path / "controle/cvm/inf_diario/competencia=202610/manifesto.json"
-            ).read_bytes() == b'{"versao": 1}'
+    assert (
+        tmp_path / "controle/cvm/inf_diario/competencia=202610/manifesto.json"
+    ).read_bytes() == b'{"versao": 1}'
 
 
 def test_baixa_so_os_parquet_da_pasta_e_apaga_ao_fechar(tmp_path: Path) -> None:
@@ -208,8 +211,14 @@ def _carga_ate_a_staging(snapshot: Path, pasta_lake: Path) -> None:
 
 def _cabecalhos(bytes_servidor: int | None) -> Callable[[str], dict[str, Any]]:
     def cabecalhos(competencia: str) -> dict[str, Any]:
-        return {"url": f"https://cvm/{competencia}", "etag": '"v1"', "last_modified": "x",
-                "bytes": bytes_servidor, "obtido_em": "agora"}
+        return {
+            "url": f"https://cvm/{competencia}",
+            "etag": '"v1"',
+            "last_modified": "x",
+            "bytes": bytes_servidor,
+            "obtido_em": "agora",
+        }
+
     return cabecalhos
 
 
@@ -239,15 +248,16 @@ def test_validar_e_reconciliar_pelo_adls(snapshot: Path, tmp_path: Path) -> None
     assert list((pasta / "ouro/cvm/inf_diario_mensal/competencia=202610").glob("*.parquet"))
 
 
-def test_staging_divergente_responde_200_com_ok_false(snapshot: Path, tmp_path: Path) -> None:
+def test_staging_vazia_responde_200_com_ok_false(snapshot: Path, tmp_path: Path) -> None:
     pasta = tmp_path / "lake"
     _carga_ate_a_staging(snapshot, pasta)
     parquet = pasta / "staging/cvm/inf_diario" / f"carga={CARGA}" / "competencia=202610"
     for arquivo in parquet.iterdir():
         arquivo.unlink()
     with adls(pasta) as arm:
-        status, resposta = entrada.tratar("validar", _corpo(), arm, Lake(arm.raiz),
-                                          _cabecalhos(None))
+        status, resposta = entrada.tratar(
+            "validar", _corpo(), arm, Lake(arm.raiz), _cabecalhos(None)
+        )
     assert status == 200 and resposta["ok"] is False
     assert any("No files found" in f for f in resposta["falhas"])
 
@@ -267,17 +277,26 @@ def test_head_que_falha_nao_derruba_a_carga(snapshot: Path, tmp_path: Path) -> N
 
     arm, lake = ArmazenamentoLocal(), Lake(str(tmp_path / "lake"))
     assert entrada.metadados_da_origem(fora_do_ar, arm, lake, "202610", CARGA) == {
-        "erro": "TimeoutError: timed out"}
+        "erro": "TimeoutError: timed out"
+    }
 
 
-@pytest.mark.parametrize("corpo", [
-    b"nao e json", b"[]", b'{"carga": "x"}', b'{"competencia": "202613", "carga": "x"}',
-    b'{"competencia": 202610, "carga": "x"}', b'{"competencia": "202610", "carga": "../x"}',
-])
+@pytest.mark.parametrize(
+    "corpo",
+    [
+        b"nao e json",
+        b"[]",
+        b'{"carga": "x"}',
+        b'{"competencia": "202613", "carga": "x"}',
+        b'{"competencia": 202610, "carga": "x"}',
+        b'{"competencia": "202610", "carga": "../x"}',
+    ],
+)
 def test_corpo_invalido_responde_400_sem_tocar_no_lake(corpo: bytes, tmp_path: Path) -> None:
     lake = Lake(str(tmp_path / "lake"))
-    status, resposta = entrada.tratar("validar", corpo, ArmazenamentoLocal(), lake,
-                                      _cabecalhos(None))
+    status, resposta = entrada.tratar(
+        "validar", corpo, ArmazenamentoLocal(), lake, _cabecalhos(None)
+    )
     assert status == 400 and resposta["ok"] is False
     assert resposta["falhas"][0].startswith("pedido inválido")
     assert not (tmp_path / "lake").exists()
@@ -288,9 +307,11 @@ def test_corpo_invalido_responde_400_sem_tocar_no_lake(corpo: bytes, tmp_path: P
 
 def test_rotas_sao_os_function_name_do_adf_por_post_com_chave() -> None:
     filho = json.loads((RAIZ / "adf/pipeline/pl_inf_diario_mes.json").read_text())
-    nomes_no_adf = {a["typeProperties"]["functionName"]
-                    for a in filho["properties"]["activities"]
-                    if a["type"] == "AzureFunctionActivity"}
+    nomes_no_adf = {
+        a["typeProperties"]["functionName"]
+        for a in filho["properties"]["activities"]
+        if a["type"] == "AzureFunctionActivity"
+    }
     rotas = {}
     for funcao in function_app.app.get_functions():
         gatilho = next(b for b in funcao.get_bindings() if isinstance(b, HttpTrigger))
@@ -301,8 +322,9 @@ def test_rotas_sao_os_function_name_do_adf_por_post_com_chave() -> None:
         assert nivel == func.AuthLevel.FUNCTION
 
 
-def test_resposta_http_e_o_json_da_prova(snapshot: Path, tmp_path: Path,
-                                          monkeypatch: pytest.MonkeyPatch) -> None:
+def test_resposta_http_e_o_json_da_prova(
+    snapshot: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pasta = tmp_path / "lake"
     _carga_ate_a_staging(snapshot, pasta)
     monkeypatch.setenv("LAKE_CONTA", "stcvmlakedev")
@@ -329,28 +351,33 @@ class _RecusaGravar(ArmazenamentoADLS):
 
 
 def test_controle_nao_gravado_vira_ok_false_e_nao_derruba_o_json(
-        snapshot: Path, tmp_path: Path) -> None:
+    snapshot: Path, tmp_path: Path
+) -> None:
     pasta = tmp_path / "lake"
     _carga_ate_a_staging(snapshot, pasta)
     with _RecusaGravar(pasta, "/controle/") as arm:
-        status, validacao = entrada.tratar("validar", _corpo(), arm, Lake(arm.raiz),
-                                           _cabecalhos(None))
+        status, validacao = entrada.tratar(
+            "validar", _corpo(), arm, Lake(arm.raiz), _cabecalhos(None)
+        )
     assert (status, validacao["ok"]) == (200, False)
     assert any("controle não gravado" in f for f in validacao["falhas"])
 
 
 def test_manifesto_nao_gravado_deixa_o_anterior_e_o_relatorio_diz_por_que(
-        snapshot: Path, tmp_path: Path) -> None:
+    snapshot: Path, tmp_path: Path
+) -> None:
     pasta = tmp_path / "lake"
     _carga_ate_a_staging(snapshot, pasta)
     local = Lake(str(pasta))
     adf_local.delete(local.prata("202610"))
     adf_local.copy_pasta(local.staging("202610", CARGA), local.prata("202610"))
+    anterior = b'{"carga_vigente": "anterior"}'
+    ArmazenamentoLocal().gravar_bytes(local.manifesto("202610"), anterior)
     with _RecusaGravar(pasta, "manifesto.json") as arm:
         lake = Lake(arm.raiz)
         status, rec = entrada.tratar("reconciliar", _corpo(), arm, lake, _cabecalhos(None))
         relatorio = json.loads(arm.ler_bytes(lake.relatorio_carga("202610", CARGA)))
-        assert arm.existe(lake.manifesto("202610")) is False
+        assert arm.ler_bytes(lake.manifesto("202610")) == anterior
     assert (status, rec["ok"]) == (200, False)
     assert relatorio["reconciliacao"]["ok"] is False
     assert any("manifesto.json" in f for f in relatorio["reconciliacao"]["falhas"])
