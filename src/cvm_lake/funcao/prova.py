@@ -254,8 +254,9 @@ def reconciliar(
 ) -> Resposta:
     """Passo 6: bronze × prata, ouro refeito e conferido, manifesto gravado se tudo bater.
 
-    ``origem`` traz os metadados HTTP da CVM no momento da cópia (URL, ETag, Last-Modified),
-    que o manifesto guarda para a otimização futura da D3.
+    ``origem`` traz os metadados HTTP da CVM (URL, ETag, Last-Modified): na Azure, do ``HEAD``
+    que a entrada faz minutos depois da cópia; na máquina, do próprio download. O manifesto os
+    guarda para a otimização futura da D3.
     """
     inicio = time.perf_counter()
     competencia, carga = conferir_competencia(competencia), conferir_carga(carga)

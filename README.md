@@ -76,7 +76,7 @@ Com os arquivos reais de set., out. e nov./2026, baixados em 24/11/2026
 | Republicação simulada de out/2026 (3 linhas alteradas, 1 removida, 1 incluída) | só outubro muda; cada linha conferida na prata | 10 de 10 |
 | Divergência injetada na staging | a validação falha pelo hash, e a prata fica intacta | 4 de 4 |
 
-Maior tempo da Function nesta máquina: 2,53 s (validar + reconciliar somados), contra os 230 s que
+Maior tempo da Function nesta máquina: 2,54 s (validar + reconciliar somados), contra os 230 s que
 uma Function disparada por HTTP tem para responder a cada chamada.
 
 ## A fonte reescrevendo o passado
@@ -98,7 +98,7 @@ uv run cvm-lake prova --limpar                  # grava reports/prova.md e repor
 ```
 
 Os testes usam dado sintético no formato da CVM. Os arquivos baixados são os do dia: como a CVM
-regrava os meses, contagens e hashes podem diferir dos do relatório versionado (24/11/2026).
+regrava os meses, contagens e hashes podem diferir dos do relatório versionado (arquivos baixados em 24/11/2026).
 
 A prova roda sobre um lake vazio em `saida/prova`: carga inicial, reexecução, republicação
 simulada de um mês e uma divergência injetada na staging. Ela termina com código 1 se qualquer

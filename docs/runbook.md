@@ -67,8 +67,8 @@ terraform -chdir=infra/bootstrap output backend_config   # vai para o grupo de v
 
 O estado do bootstrap fica local, em `infra/bootstrap/terraform.tfstate`, fora do Git
 (`.gitignore`). Ele não guarda senha de aplicação, mas o provider grava atributos sensíveis da
-conta: guardar como confidencial. A cópia também permite o destroy do passo 12. Guardar também o
-`APP_ID`: o passo 4 o usa.
+conta: guardar o arquivo como confidencial. Ele também é necessário para o destroy do passo 12.
+Guardar também o `APP_ID`: o passo 4 o usa.
 
 ## 2. Organização, projeto e pipeline no Azure DevOps
 

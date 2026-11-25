@@ -10,7 +10,7 @@ confirma fica listado à parte.
 |---|---|---|
 | Carga, janela de reprocessamento, republicação, contagem e hash | pytest com dados sintéticos no formato da CVM, e a prova completa com os arquivos reais baixados da CVM | a lógica da tese: substitui o mês sem duplicar e sem perder |
 | Bronze, staging, prata e ouro | pastas locais com o mesmo layout do ADLS. O código só troca a raiz (pasta local ou o endpoint dfs da conta). Ouro em DuckDB | camadas, partições e agregados |
-| Function na Azure | [`tests/test_funcao.py`](../tests/test_funcao.py) (21 testes): o adaptador do ADLS sobre um serviço falso com a interface do SDK (a gravação num nome temporário e o rename por cima, sem truncar o arquivo vigente), a prova de ponta a ponta por ele, o controle que o lake recusa virando `ok: false` sem perder o manifesto anterior, o contrato HTTP (200 com `ok: false`, 400 para corpo inválido), o `HEAD` que falha sem derrubar a carga e as rotas do runtime contra os `functionName` do JSON | a Function chama o mesmo código da prova local e responde o que a guarda do pipeline lê |
+| Código da Function (adaptador do ADLS e entrada HTTP) | [`tests/test_funcao.py`](../tests/test_funcao.py) (21 testes): o adaptador do ADLS sobre um serviço falso com a interface do SDK (a gravação num nome temporário e o rename por cima, sem truncar o arquivo vigente), a prova de ponta a ponta por ele, o controle que o lake recusa virando `ok: false` sem perder o manifesto anterior, o contrato HTTP (200 com `ok: false`, 400 para corpo inválido), o `HEAD` que falha sem derrubar a carga e as rotas do runtime contra os `functionName` do JSON | a Function chama o mesmo código da prova local e responde o que a guarda do pipeline lê |
 | Pacote e scripts de deploy | [`tests/test_deploy.py`](../tests/test_deploy.py) (19 testes): o zip com o layout do Python, reprodutível e importável depois de extraído; os parâmetros do ARM a partir das saídas do Terraform; o pré e o pós-script com os argumentos que o script gerado declara (parar os dois gatilhos, os parâmetros do ambiente); `funcao.sh` e `terraform.sh` com `az` e `terraform` falsos (a chave nunca na linha de comando nem no log, a segunda execução não regrava) | o deploy pede à CLI o que a doc manda, sem vazar o segredo |
 | Terraform | [`infra/validar.sh`](../infra/validar.sh): `terraform fmt -check`, `terraform validate`, tflint (com as regras do azurerm), Checkov e `terraform test` com `mock_provider` (16 testes, sem conta; o da raiz roda com dev e com prod) | infraestrutura coerente e com as regras de segurança do desenho |
 | ADF (JSON) | [`ci/adf/validar.sh`](../ci/adf/validar.sh): `@microsoft/azure-data-factory-utilities` (validate + export do ARM) e [`tests/test_adf.py`](../tests/test_adf.py) (31 testes: referências, `dependsOn` que o validador não confere, caminhos iguais aos do código, contrato com a Function, meses dos gatilhos contra a janela, parâmetros do ARM) | o JSON é válido (esquema e referências), gera o ARM e faz o que o código local faz; não prova a execução ([`adf.md`](adf.md#validar)) |
@@ -89,7 +89,7 @@ mesmo que vai para a Azure. Diferenças declaradas:
 - o ForEach roda os meses em sequência. No ADF são lotes em paralelo, e cada mês só escreve nos
   próprios caminhos;
 - os tempos do relatório são desta máquina. A folga contra os 230 s que a Function tem para
-  responder por HTTP (menos de 3 s no pior mês, medido aqui) se confirma na execução na Azure.
+  responder por HTTP (menos de 3 s no pior mês, medido aqui) só se confirma executando na Azure.
 
 Limite: a tese é provada pela execução local da mesma lógica, nas mesmas pastas e com a mesma
 janela. A equivalência com o ADF executando só se confirma implantando.
@@ -139,8 +139,8 @@ O que nenhum teste local confirma (o roteiro para conferir está em [`runbook.md
 - O custo: contagem de execuções de atividade cobradas, preço do Flex Consumption e do Key Vault.
 
 Premissas da fonte, conferidas ao longo da operação:
-- o dia da atualização semanal da CVM (observado duas vezes: sábados, 14/11/2026 e 21/11/2026,
-  quando setembro ganhou 95 linhas, ver
+- o dia da atualização semanal da CVM (observado duas vezes, aos sábados: 14/11/2026 e 21/11/2026,
+  este quando setembro ganhou 95 linhas; ver
   [`dado.md`](dado.md#a-fonte-reescrevendo-o-passado-fato-observado));
 - se o `ETag` do servidor da CVM fica igual quando o arquivo é regravado sem mudança (necessário
   para a otimização futura da D3);

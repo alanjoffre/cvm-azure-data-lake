@@ -111,7 +111,7 @@ Cada decisão de desenho do case, com o motivo e o que fica de fora. Formato cur
   `bronze/.../competencia=AAAAMM/carga=<RUN_ID>/`, sem sobrescrever entre cargas (dentro da
   mesma carga, a retentativa do Copy regrava o mesmo arquivo). Uma regra de ciclo de vida
   do armazenamento apaga as versões com mais de 90 dias.
-- **Consequência:** a bronze recebe ~22 ZIPs de até ~11 MB por semana, cerca de 240 MB (ordem
+- **Consequência:** a bronze recebe ~22 ZIPs de ~12 MB por semana, cerca de 260 MB (ordem
   de 3 GB no teto de 90 dias), centavos por mês. A prova de republicação confere que as duas
   versões estão lá.
 

@@ -3,7 +3,8 @@
 Como uma fonte pública que **reescreve o próprio passado** chega a um data lake na Azure sem
 duplicar e sem perder linha. A orquestração fica com o Azure Data Factory (ADF) e o armazenamento
 com o ADLS Gen2. A infraestrutura é Terraform, e a promoção de dev para prod é feita pelo
-Azure Pipelines.
+Azure Pipelines. Desenho de referência, validado localmente; não aplicado na Azure
+([Limites declarados](../README.md#limites-declarados)).
 
 As decisões e o motivo de cada uma estão em [`decisoes.md`](decisoes.md) (citadas aqui como
 D1, D2…). O que se testa na máquina e o que só a Azure testa está em [`testes.md`](testes.md).

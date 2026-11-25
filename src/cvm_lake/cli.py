@@ -120,9 +120,9 @@ def para_markdown(r: dict[str, Any]) -> str:
         "",
         "## Tempos por mês",
         "",
-        "Function (s) = validar + reconciliar, as duas chamadas que a Function fará. Medido nesta "
-        f"máquina, não na Azure: a folga contra os {LIMITE_FUNCAO_S} s que uma Function por HTTP "
-        "tem para responder se confirma na execução na Azure.",
+        "Function (s) = validar + reconciliar, as duas chamadas que o ADF fará à Function. Medido "
+        f"nesta máquina, não na Azure: a folga contra os {LIMITE_FUNCAO_S} s que uma Function por "
+        "HTTP tem para responder só se confirma executando na Azure.",
         "",
         "| Carga | Competência | Pipeline (s) | Validar (s) | Reconciliar (s) | Function (s) |",
         "|---|---|---:|---:|---:|---:|",
